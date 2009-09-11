@@ -17,7 +17,7 @@ class GlWidget(QGLWidget):
         self.cube = False
         
         self.mousePosX = 0.0
-        self.mousePoxY = 0.0
+        self.mousePosY = 0.0
         self.mousePosZ = 0.0
         
         self.coordPosition = []
@@ -73,6 +73,7 @@ class GlWidget(QGLWidget):
         """A simple resize callback."""
         
         side = min(width,height)
+        #glViewport(0, 0, width, height)
         glViewport((width - side) / 2, (height - side) / 2, side, side)
         glMatrixMode(GL_MODELVIEW)
 
@@ -104,32 +105,39 @@ class GlWidget(QGLWidget):
             self.sphere = True
             self.update()
         else:
-            pass
+            pass        
             
     def draw(self):
         self.mousePosX = self.mapFromGlobal(QCursor.pos()).x()
-        self.mousePoxY = self.mapFromGlobal(QCursor.pos()).y()
+        self.mousePosY = self.mapFromGlobal(QCursor.pos()).y()
         
 #        self.mousePosZ = glReadPixels(self.mousePosX, self.mousePoxY, 1, 1, 
 #                                      GL_DEPTH_COMPONENT, GL_FLOAT)
         self.mousePosZ = 1
+        
+        #Para que o movimento do mouse seja reconhecido sem se pressionar nenhum botao do mouse
+        self.setMouseTracking(True)
 
-        self.coordPosition = gluUnProject(self.mousePosX, self.mousePoxY, self.mousePosZ,
+        self.mousePosY = glGetIntegerv(GL_VIEWPORT)[3] - self.mousePosY - 1
+        
+        self.coordPosition = gluUnProject(self.mousePosX, self.mousePosY, self.mousePosZ,
 										  glGetDoublev(GL_MODELVIEW_MATRIX),
 										  glGetDoublev(GL_PROJECTION_MATRIX),
 										  glGetIntegerv(GL_VIEWPORT))
         
         if (self.sphere):
             glColor3f(1.0, 0, 0)
+            glTranslatef(self.coordPosition[0], self.coordPosition[1],
+                         self.coordPosition[2])
             Sphere(0.5)
             glMatrixMode(GL_MODELVIEW)
-            glTranslatef(self.coordPosition[0], self.coordPosition[1],
-						 self.coordPosition[2])
             self.sphere = False
+                       
         if (self.cube):
             glColor3f(1.0, 0, 1.0)
+            glTranslatef(self.coordPosition[0], self.coordPosition[1],
+                         self.coordPosition[2])
             Cube(0.5)
             glMatrixMode(GL_MODELVIEW)
-            glTranslatef(self.coordPosition[0], self.coordPosition[1],
-						 self.coordPosition[2])
             self.cube = False
+            
