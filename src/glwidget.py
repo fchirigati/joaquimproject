@@ -89,14 +89,35 @@ class GlWidget(QGLWidget):
 	def mouseReleaseEvent(self, ev):
 		print "Solto... :("			 
 
-	def enterEvent(self, ev):
+<<<<<<< .mine    def keyPressEvent(self, ev):
+        key = str(ev.text()).upper()
+        if (key == "C"):
+            self.cube = True
+            self.update()
+        elif (key == "E"):
+            self.sphere = True
+            self.update()
+        else:
+            pass        
+    
+    def draw(self):
+        self.mousePosX = self.mapFromGlobal(QCursor.pos()).x()
+        self.mousePosY = self.mapFromGlobal(QCursor.pos()).y()
+        
+#        self.mousePosZ = glReadPixels(self.mousePosX, self.mousePoxY, 1, 1, 
+#                                      GL_DEPTH_COMPONENT, GL_FLOAT)
+        self.mousePosZ = 1
+        
+        #Para que o movimento do mouse seja reconhecido sem se pressionar nenhum botao do mouse
+        self.setMouseTracking(True)
+=======	def enterEvent(self, ev):
 		self.setFocus()
 		self.grabKeyboard()
 		
 	def leaveEvent(self, ev):
 		self.parent().setFocus()
 		self.releaseKeyboard()
-
+>>>>>>> .theirs
 	def keyPressEvent(self, ev):
 		key = str(ev.text()).upper()
 		if (key == "C"):
