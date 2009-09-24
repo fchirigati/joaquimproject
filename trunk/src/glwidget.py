@@ -35,7 +35,8 @@ class GlWidget(QGLWidget):
 		self.mousePosZ = 0.0
 		self.move = 0.0
 		self.z = 0.0
-		self.zoom = 2.0
+		self.z2 = 0.0
+		self.zoom = 0.5
 		self.applyZoom = 0
 		
 	def initializeGL(self):
@@ -60,13 +61,19 @@ class GlWidget(QGLWidget):
 
 	def mouseMoveEvent(self, ev):
 		""""Mouse movement callback."""
-		
+		self.z = self.mousePosY
 		if self.applyZoom:
-			if self.z > self.zoom:
-				self.zoom -= abs(self.zoom - self.z)/500
+			if self.z > self.z2:
+				#self.zoom -= abs(self.zoom - self.z)/750
+				self.zoom += 0.2
+				self.z2 = self.mousePosY
+				self.updateMousePosition()
 				self.updateGL()
 			else:
-				self.zoom += abs(self.zoom - self.z)/500
+				#self.zoom += abs(self.zoom - self.z)/750
+				self.zoom -= 0.2
+				self.z2 = self.mousePosY
+				self.updateMousePosition()
 				self.updateGL() 
 		
 		if (self.isClicked):
@@ -83,14 +90,16 @@ class GlWidget(QGLWidget):
 		if (btn == Qt.LeftButton):
 			btn = "Left"
 			self.pickingObjects(self.mousePosX, self.mousePosY)
-			self.isClicked = True
-			self.boundingSphere.setInitialPt(self.mousePosX, self.mousePosY)
 		elif (btn == Qt.RightButton):
 			btn = "Right"
-			self.applyZoom = True
-			self.z = self.mousePosY
+			self.isClicked = True
+			self.boundingSphere.setInitialPt(self.mousePosX, self.mousePosY)
+			#self.applyZoom = True
+			#self.z = self.mousePosY
 		elif (btn == Qt.MidButton):
 			btn = "Middle"
+			self.applyZoom = True
+			self.z = self.mousePosY
 		else:
 			btn = "Joaquim"
 		print "Click: %s (%i, %i)" % (btn, self.mousePosX, self.mousePosY)
@@ -131,16 +140,16 @@ class GlWidget(QGLWidget):
 			self.sceneObjects.append(newSphere)
 			self.updateGL()
 		elif (key == "W"):
-			self.zoom -= 0.2
-			self.updateGL()
-		elif (key == "S"):
 			self.zoom += 0.2
 			self.updateGL()
+		elif (key == "S"):
+			self.zoom -= 0.2
+			self.updateGL()
 		elif (key == "A"):
-			self.move -= 0.3
+			self.move += 0.3
 			self.updateGL()
 		elif (key == "D"):
-			self.move += 0.3
+			self.move -= 0.3
 			self.updateGL()
 		else:
 			pass
@@ -168,10 +177,12 @@ class GlWidget(QGLWidget):
 		return self.coordPosition
 		
 	def render(self):
-		
+				
 		glMatrixMode(GL_PROJECTION)
 		glLoadIdentity()
-		gluPerspective(45, 1, 1, 20)
+		gluPerspective(45, 1, 1, 500)
+		
+		glTranslate(self.move,0,self.zoom)
 		
 		glMatrixMode(GL_MODELVIEW)
 		glLoadIdentity()
@@ -188,6 +199,9 @@ class GlWidget(QGLWidget):
 		glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse0)
 		glLightfv(GL_LIGHT0, GL_SPECULAR, specular0)
 		glLightfv(GL_LIGHT0, GL_AMBIENT, ambient0)
+		
+		
+		
 		
 		# Create a small white wire sphere in the 0 coordinate, just for refernece.
 		glColor(1, 1, 1)
