@@ -28,6 +28,13 @@ class BaseObject(object):
 		else:
 			self.r = 1.0
 			self.g = 0.0
+			
+	def selectionStatus(self):
+		return self.selected
+			
+	def selectObject(self):
+		self.selected = not(self.selected)
+		self.changeColor()
 	
 	def getRotationMatrix(self):
 		return self.rotationMatrix
