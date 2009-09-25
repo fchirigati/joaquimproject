@@ -28,7 +28,7 @@ class GlWidget(QGLWidget):
 		self.boundingSphere.setCentralPosition([0, 0, 0])
 		self.boundingSphere.setRadius(1)
 		
-		self.selectedObject = None
+		self.ctrl = False
 		self.isClicked = False
 		self.mousePosX = 0.0
 		self.mousePosY = 0.0
@@ -127,6 +127,8 @@ class GlWidget(QGLWidget):
 		
 		self.updateMousePosition()
 		key = str(ev.text()).upper()
+		if (ev.modifiers() == Qt.ControlModifier):
+			self.ctrl = True
 		if (key == "C"):
 			newCube = Cube(0.5, False)
 			newCube.setCentralPosition(self.getMouseScenePosition())
@@ -153,6 +155,9 @@ class GlWidget(QGLWidget):
 			self.updateGL()
 		else:
 			pass
+		
+	def keyReleaseEvent(self, ev):
+		self.ctrl = False
 		
 	def updateMousePosition(self):
 		"""Updates mousePosX and mousePosY attributes, using GL coordinates."""
@@ -258,8 +263,18 @@ class GlWidget(QGLWidget):
 			print near, far
 			if (nearestHit == None) or (near < nearestHit[0]):
 				nearestHit = [near, names[0]]
+				
+		pickedObject = self.sceneObjects[nearestHit[1]]
 		
 		if nearestHit != None:
-			self.sceneObjects[nearestHit[1]].changeColor()
+			unselectedObjects = 0
+			if not self.ctrl:
+				for obj in self.sceneObjects:
+					if (obj != pickedObject) and (obj.selectionStatus()):
+						obj.selectObject()
+						unselectedObjects += 1
+			
+			if (unselectedObjects == 0) or (not(pickedObject.selectionStatus())):
+				pickedObject.selectObject()
 				
 		self.updateGL()
