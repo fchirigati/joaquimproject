@@ -6,10 +6,14 @@ import numpy
 from util import *
 
 class ArcBall(object):
-	"""This class represents an arcball object."""
+	"""
+	This class represents an arcball object.
+	"""
 	
-	def __init__(self):
-		"""Default constructor."""
+	def __init__(self, parent):
+		"""
+		Default constructor.
+		"""
 		
 		# Absolute position of the arcball in the scene.
 		self.centralPos = [0.0, 0.0, 0.0]
@@ -19,6 +23,8 @@ class ArcBall(object):
 		self.initialPt = [0, 0, 0]
 		# Final point on the sphere that should be used to determine the arcball rotation.
 		self.finalPt = [0, 0, 0]
+		# Set a reference to the GLWidget that contains this ArcBall object.
+		self.parent = parent
 		
 	def setCentralPosition(self, newPosition):
 		self.centralPos = newPosition
@@ -27,44 +33,54 @@ class ArcBall(object):
 		self.radius = newRadius
 		
 	def setInitialPt(self, x, y):
-		"""Sets the initial point of the arcball manipulation, in screen coordinates."""
+		"""
+		Sets the initial point of the arcball manipulation, in screen coordinates.
+		"""
 		
 		self.initialPt = self.screenToSphereCoordinates(x, y)
 		
-	def setFinalPt(self, x, y):
-		"""Sets the final point of the arcball manipulation, in screen coordinates,
+	def setFinalPt(self, x, y, inverse=False):
+		"""
+		Sets the final point of the arcball manipulation, in screen coordinates,
 		returning the rotation matrix associated with the movement.
-		This method does not unset the initial point."""
+		"""
 		
 		self.finalPt = self.screenToSphereCoordinates(x, y)
-		
-		quaternion = crossProduct(self.initialPt, self.finalPt)
-		quaternion.append(numpy.dot(self.initialPt, self.finalPt))
-		
-		retMatrix = numpy.matrix(self.__getRotationMatrix(quaternion))
-		
+		retMatrix = self.__getRotation()
 		self.initialPt = self.finalPt
+		
+		if inverse:
+			retMatrix = numpy.transpose(retMatrix)
 		
 		return retMatrix  
 		
 	def screenToSphereCoordinates(self, x, y):
-		"""Maps screen coordinates to the arcball's sphere coordinates."""
+		"""
+		Maps screen coordinates to the arcball's sphere coordinates.
+		Warning: This method sets the matrix mode to GL_MODELVIEW.
+		"""
 		
 		# Initialize sphere coordinates array (return value).
-		sphereCoords = [0, 0, 0]
+		sphereCoords = numpy.zeros(4)
+		sphereCoords[W] = 1
 		
 		# Gets the sphere's center position on the screen.
-		screenCenter = gluProject(self.centralPos[X], self.centralPos[Y], self.centralPos[Z])
-		#screenCenter = gluProject(self.centralPos[X], self.centralPos[Y], self.centralPos[Z],
-		#						glGetDoublev(GL_MODELVIEW_MATRIX),
-		#						glGetDoublev(GL_PROJECTION_MATRIX))
+		screenCenter = gluProject(self.centralPos[X], self.centralPos[Y], self.centralPos[Z])[:2]
 		
 		# Calculates the radius of the sphere projected on the screen.
-		_Z = 1
-		d = 1.0
-		#screenRadius = self.radius * _Z * d * glGetIntegerv(GL_VIEWPORT)[2]
-		screenRadius = self.radius * _Z / d * 0.5 * glGetIntegerv(GL_VIEWPORT)[2]
-		print screenRadius
+		viewport = glGetInteger(GL_VIEWPORT)
+		screenBorder = [None, None]
+		perpVector = numpy.array(self.parent.upVector) * self.radius
+		for i in range(3):
+			perpVector[i] *= self.parent.scale[i]
+		
+		glMatrixMode(GL_MODELVIEW)
+		borderPoint = multiplyByMatrix(self.centralPos) + perpVector
+		glMatrixMode(GL_PROJECTION)
+		projectionPoint = multiplyByMatrix(borderPoint)
+		screenBorder[X] = viewport[0] + viewport[2] * (projectionPoint[0]*0.5 + 0.5)
+		screenBorder[Y] = viewport[1] + viewport[3] * (projectionPoint[1]*0.5 + 0.5)
+		screenRadius = distance(screenCenter, screenBorder)
 		
 		# Finally, sets the sphere coordinates.
 		sphereCoords[X] = (x - screenCenter[X]) / screenRadius
@@ -77,40 +93,83 @@ class ArcBall(object):
 		else:
 			sphereCoords[Z] = sqrt(1 - r)
 			
-		print sphereCoords
-		
+		# Rotates the sphere coordinates according to the camera.
+		glMatrixMode(GL_MODELVIEW)
+		glPushMatrix()
+		# Unsets all translations in the matrix.
+		tempMatrix = glGetDouble(GL_MODELVIEW_MATRIX)
+		for i in range(3):
+			tempMatrix[W][i] = 0
+		# Makes the inverse rotation to the coordinates (we have the camera's rotation).
+		glLoadMatrixd(numpy.transpose(tempMatrix))
+		sphereCoords = multiplyByMatrix(sphereCoords)
+		glPopMatrix()
+			
 		return sphereCoords
 	
-	def __getRotationMatrix(self, q):
-		"""Transforms a quaternion into a rotation matrix and returns it."""
+	def __getRotation(self):
+		"""
+		Returns the rotation matrix of the arcball based on the initial and final points.
+		Warning: This method sets the matrix mode to GL_MODELVIEW.
+		"""
 		
-		assert(len(q) == 4)
+		glMatrixMode(GL_MODELVIEW)
 		
-		n = 0
-		for i in range(4):
-			n += q[i]*q[i]
+		perpVector = crossProduct(self.initialPt, self.finalPt)
+		
+		glPushMatrix()
+		glLoadIdentity()
+		glRotate(angle(self.initialPt, self.finalPt), *perpVector[:3])
+		retMatrix = glGetDouble(GL_MODELVIEW_MATRIX)
+		glPopMatrix()
+		
+		return retMatrix
 
-		s = 0.0
-		if (n > 0.0):
-			s = 2.0 / n
+class SceneArcBall(ArcBall):
+	"""
+	Specific ArcBall object for the overall scene.
+	"""
+	
+	#def __init__(self, parent):
+	#	super(SceneArcBall, self).__init__(parent)
+	
+	def screenToSphereCoordinates(self, x, y):
+		"""
+		Maps screen coordinates to the arcball's sphere coordinates.
+		Warning: This method sets the matrix mode to GL_MODELVIEW.
+		"""
 		
-		xs = q [X] * s
-		ys = q [Y] * s
-		zs = q [Z] * s
-		wx = q [W] * xs
-		wy = q [W] * ys
-		wz = q [W] * zs
-		xx = q [X] * xs
-		xy = q [X] * ys
-		xz = q [X] * zs
-		yy = q [Y] * ys
-		yz = q [Y] * zs
-		zz = q [Z] * zs
-
-		# See Lengyel pages 88-92
-		rot = [	[1.0 - (yy + zz),	xy - wz,			xz + wy,			0],
-				[xy + wz,			1.0 - (xx + zz),	yz - wx,			0],
-				[xz - wy,			yz + wx,			1.0 - (xx + yy),	0],
-				[0, 				0,					0,					1]] 
+		# Initialize sphere coordinates array (return value).
+		sphereCoords = numpy.zeros(4)
+		sphereCoords[W] = 1
 		
-		return rot
+		# Gets the sphere's center position on the screen.
+		screenCenter = [self.parent.wWidth*0.5, self.parent.wHeight*0.5]
+		
+		# Calculates the radius of the sphere projected on the screen.
+		screenRadius = lengthVector(screenCenter)
+		
+		# Finally, sets the sphere coordinates.
+		sphereCoords[X] = (x - screenCenter[X]) / screenRadius
+		sphereCoords[Y] = (y - screenCenter[Y]) / screenRadius 
+		r = sphereCoords[X]*sphereCoords[X] + sphereCoords[Y]*sphereCoords[Y]
+		if (r > 1):
+			# Selected point is outside the sphere boudings on the screen.
+			sphereCoords[X] /= sqrt(r)
+			sphereCoords[Y] /= sqrt(r)
+		else:
+			sphereCoords[Z] = sqrt(1 - r)
+			
+		# Rotates the sphere coordinates according to the camera.
+		glMatrixMode(GL_MODELVIEW)
+		glPushMatrix()
+		# Unsets all translations in the matrix.
+		tempMatrix = glGetDouble(GL_MODELVIEW_MATRIX)
+		for i in range(3):
+			tempMatrix[W][i] = 0
+		# Makes the inverse rotation to the coordinates (we have the camera's rotation).
+		glLoadMatrixd(numpy.transpose(tempMatrix))
+		sphereCoords = multiplyByMatrix(sphereCoords)
+		glPopMatrix()
+			
+		return sphereCoords
