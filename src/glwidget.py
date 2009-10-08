@@ -44,7 +44,7 @@ class GlWidget(QGLWidget):
 		# Camera's scale factor.
 		self.scale = numpy.array([1.0, 1.0, 1.0])
 		# Near/far clipping plane values.
-		self.near, self.far = 1, 101
+		self.near, self.far = 1, 21
 		# Perspective angle (in degrees).
 		self.fovAngle = 45
 		
@@ -63,6 +63,8 @@ class GlWidget(QGLWidget):
 		"""
 		
 		glEnable(GL_DEPTH_TEST)
+		glEnable(GL_BLEND)
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 		glEnable(GL_LIGHTING)
 		glEnable(GL_LIGHT0)
 		glEnable(GL_COLOR_MATERIAL)
@@ -268,14 +270,6 @@ class GlWidget(QGLWidget):
 				self.upVector[X], self.upVector[Y], self.upVector[Z])
 		glScale(self.scale[X], self.scale[Y], self.scale[Z])
 		
-		# Create a small white sphere in the center of the scene's rotation center, just for refernece.
-		if self.rotating:
-			rotCenter = (self.position + self.pointer*10)[:3]
-			glColor(1, 1, 1)
-			glTranslate(*rotCenter)
-			glutSolidSphere(0.1, 20, 20)
-			glTranslate(*-rotCenter)
-		
 	def render(self):
 		"""
 		Renders the scene.
@@ -306,6 +300,21 @@ class GlWidget(QGLWidget):
 			glPushMatrix()
 			obj.render()
 			glPopMatrix()
+			
+		# Create a small white sphere in the center of the scene's rotation center, just for refernece.
+		if self.rotating:
+			alpha = 1
+		else:
+			alpha = 0.2
+			
+		rotCenter = (self.position + self.pointer*10)[:3]
+		glColor4f(0.3, 0.6, 1, alpha)
+		glTranslate(*rotCenter)
+		glutWireSphere(10, 20, 20)
+		glTranslate(*-rotCenter)
+		
+		#if not self.rotating:
+		#glDepthMask(GL_TRUE)
 			
 	def handlePicking(self, x, y):
 		"""
