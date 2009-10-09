@@ -194,12 +194,14 @@ class GlWidget(QGLWidget):
 		self.z = self.mousePos[Y]
 		if self.applyZoom:
 			if self.z > self.z2:
-				self.position[Z] -= 0.2
+				if self.fovAngle > 1:
+					self.fovAngle -= 1
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
 				self.updateGL()
 			else:
-				self.position[Z] += 0.2
+				if self.fovAngle < 179:
+					self.fovAngle += 1
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
 				self.updateGL()
@@ -313,20 +315,22 @@ class GlWidget(QGLWidget):
 			self.deleteSelectedObjects()
 			
 		elif (key == "W"):
-			self.position[Y] += 0.2
-			self.updateGL()
+			self.upCamera()
 			
 		elif (key == "S"):
-			self.position[Y] -= 0.2
-			self.updateGL()
+			self.downCamera()
 			
 		elif (key == "A"):
-			self.position[X] -= 0.3
-			self.updateGL()
+			self.leftCamera()
 			
 		elif (key == "D"):
-			self.position[X] += 0.3
-			self.updateGL()
+			self.rightCamera()
+			
+		elif (key == "F"):
+			self.forwardCamera()
+			
+		elif (key == "B"):
+			self.backwardCamera()
 			
 		elif (ev.key() == Qt.Key_Home):
 			self.homeKeyPressEvent()
@@ -348,7 +352,6 @@ class GlWidget(QGLWidget):
 		"""
 		
 		newCube = Cube(0.5, self, False)
-		print self.getMouseScenePosition()
 		newCube.setCentralPosition(self.getMouseScenePosition())
 		newCube.setRotationMatrix(self.rotation)
 		self.sceneObjects.append(newCube)
@@ -375,20 +378,89 @@ class GlWidget(QGLWidget):
 		del self.selectedObjects[:]
 		self.updateGL()
 		
+	def upCamera(self):
+		"""
+		Moves the camera up.
+		"""
+		
+		self.position[X] += self.upVector[X]/10
+		self.position[Y] += self.upVector[Y]/10
+		self.position[Z] += self.upVector[Z]/10
+		
+		self.updateGL()
+	
+	def downCamera(self):
+		"""
+		Moves the camera down.
+		"""
+		
+		self.position[X] -= self.upVector[X]/10
+		self.position[Y] -= self.upVector[Y]/10
+		self.position[Z] -= self.upVector[Z]/10
+		
+		self.updateGL()
+	
+	def leftCamera(self):
+		"""
+		Moves the camera left.
+		"""
+		
+		leftVector = crossProduct(self.upVector, self.pointer)
+		
+		self.position[X] += leftVector[X]/10
+		self.position[Y] += leftVector[Y]/10
+		self.position[Z] += leftVector[Z]/10
+		
+		self.updateGL()
+	
+	def rightCamera(self):
+		"""
+		Moves the camera right.
+		"""
+		
+		leftVector = crossProduct(self.upVector, self.pointer)
+		
+		self.position[X] -= leftVector[X]/10
+		self.position[Y] -= leftVector[Y]/10
+		self.position[Z] -= leftVector[Z]/10
+		
+		self.updateGL()
+	
+	def forwardCamera(self):
+		"""
+		Moves the camera forward.
+		"""
+		
+		self.position[X] += self.pointer[X]/10
+		self.position[Y] += self.pointer[Y]/10
+		self.position[Z] += self.pointer[Z]/10
+		
+		self.updateGL()
+	
+	def backwardCamera(self):
+		"""
+		Moves the camera backward.
+		"""
+		
+		self.position[X] -= self.pointer[X]/10
+		self.position[Y] -= self.pointer[Y]/10
+		self.position[Z] -= self.pointer[Z]/10
+		
+		self.updateGL()
+		
 	def homeKeyPressEvent(self):
 		"""
 		Event called when HOME key is pressed.
 		"""
 		
 		if len(self.sceneObjects) > 0:
-			for obj in self.sceneObjects:
-				maxX = obj.centralPos[X]
-				minX = obj.centralPos[X]
-				maxY = obj.centralPos[Y]
-				minY = obj.centralPos[Y]
-				maxZ = obj.centralPos[Z]
-				maxN = obj.centralPos[Z]
-				break
+			obj = self.sceneObjects[0]
+			maxX = obj.centralPos[X]
+			minX = obj.centralPos[X]
+			maxY = obj.centralPos[Y]
+			minY = obj.centralPos[Y]
+			maxZ = obj.centralPos[Z]
+			minZ = obj.centralPos[Z]
 			
 			for obj in self.sceneObjects:
 				if obj.centralPos[X] > maxX:
@@ -401,16 +473,29 @@ class GlWidget(QGLWidget):
 					minY = obj.centralPos[Y]
 				if obj.centralPos[Z] > maxZ:
 					maxZ = obj.centralPos[Z]
+				if obj.centralPos[Z] < minZ:
+					minZ = obj.centralPos[Z]
 				
-			maxN = max(abs(maxX-minX),abs(maxY-minY))
-			self.position[X] = (minX+maxX)/2.0
-			self.position[Y] = (minY+maxY)/2.0
-			self.position[Z] = maxN/tan(22.5*pi/180) + abs(maxZ) + 2
+			sideX = abs(maxX-minX)
+			sideY = abs(maxY-minY)
+			sideZ = abs(maxZ-minZ)
+			
+			side = max(sideX, sideY)
+			side = max(side, sideZ)
+			print side
+			
+			positionX = (minX+maxX)/2.0
+			positionY = (minY+maxY)/2.0
+			positionZ = (minZ+maxZ)/2.0
+			
+			self.position[X] = positionX - self.pointer[X]*(side*sqrt(3))
+			self.position[Y] = positionY - self.pointer[Y]*(side*sqrt(3))
+			self.position[Z] = positionZ - self.pointer[Z]*(side*sqrt(3))
 				
 		else:
-			self.position[X] = 0
-			self.position[Y] = 0
-			self.position[Z] = 3
+			self.position[X] = 0 - self.pointer[X]*3
+			self.position[Y] = 0 - self.pointer[Y]*3
+			self.position[Z] = 0 - self.pointer[Z]*3
 			
 		self.updateGL()
 		
@@ -495,7 +580,7 @@ class GlWidget(QGLWidget):
 		glEnable(GL_LIGHTING)
 		glLineWidth(1)
 		
-	def __arcBallReference(self):
+	def __renderArcBall(self):
 		"""
 		Creates a small wire sphere centered on the scene's rotation center
 		that approximatly bounds the visualization volume.
@@ -538,8 +623,8 @@ class GlWidget(QGLWidget):
 			obj.render()
 			glPopMatrix()
 			
-		# ArcBall reference
-		self.__arcBallReference()
+		# Reference to ArcBall
+		self.__renderArcBall()
 		
 		#if not self.rotating:
 		#	glDepthMask(GL_TRUE)
@@ -572,7 +657,7 @@ class GlWidget(QGLWidget):
 #			del p
 		else:
 			for obj in self.selectedObjects:
-				obj.setCentralPosition(applyVector(obj.getCentralPosition(), shift*5))
+				obj.setCentralPosition(applyVector(obj.getCentralPosition(), shift))
 		self.initPosition = self.finalPosition
 			
 	def handlePicking(self, x, y):
