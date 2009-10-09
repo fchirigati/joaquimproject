@@ -303,13 +303,13 @@ class GlWidget(QGLWidget):
 			self.ctrl = True
 			
 		if (key == "C"):
-			self.drawCube()
+			self.createCube()
 			
 		elif (key == "E"):
-			self.drawSphere()
+			self.createSphere()
 			
 		elif (key == "X"):
-			self.deleteObjects()
+			self.deleteSelectedObjects()
 			
 		elif (key == "W"):
 			self.position[Y] += 0.2
@@ -341,9 +341,9 @@ class GlWidget(QGLWidget):
 		if (ev.key() == Qt.Key_Control):
 			self.ctrl = False
 			
-	def drawCube(self):
+	def createCube(self):
 		"""
-		Draws a new cube.
+		Creates a new cube.
 		"""
 		
 		newCube = Cube(0.5, self, False)
@@ -353,9 +353,9 @@ class GlWidget(QGLWidget):
 		self.sceneObjects.append(newCube)
 		self.updateGL()
 		
-	def drawSphere(self):
+	def createSphere(self):
 		"""
-		Draws a new sphere.
+		Creates a new sphere.
 		"""
 		
 		newSphere = Sphere(0.5, self, False)
@@ -364,7 +364,7 @@ class GlWidget(QGLWidget):
 		self.sceneObjects.append(newSphere)
 		self.updateGL()
 		
-	def deleteObjects(self):
+	def deleteSelectedObjects(self):
 		"""
 		Deletes all selected objects.
 		"""
