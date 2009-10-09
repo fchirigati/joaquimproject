@@ -44,7 +44,7 @@ class GlWidget(QGLWidget):
 		# Camera's scale factor.
 		self.scale = numpy.array([1.0, 1.0, 1.0])
 		# Near/far clipping plane values.
-		self.near, self.far = 1, 200
+		self.near, self.far = 1, 500
 		# Perspective angle (in degrees).
 		self.fovAngle = 45
 		
@@ -103,7 +103,6 @@ class GlWidget(QGLWidget):
 		"""
 		Mouse movement callback.
 		"""
-		
 		# Translation
 		if self.translating:
 			self.updateMousePosition()
@@ -248,13 +247,47 @@ class GlWidget(QGLWidget):
 			self.position[Y] -= 0.2
 			self.updateGL()
 		elif (key == "A"):
-			self.position[X] += 0.3
-			self.updateGL()
-		elif (key == "D"):
 			self.position[X] -= 0.3
 			self.updateGL()
+		elif (key == "D"):
+			self.position[X] += 0.3
+			self.updateGL()
+			
 		elif (ev.key() == Qt.Key_Home):
-			pass
+			
+			if len(self.sceneObjects) > 0:
+				for obj in self.sceneObjects:
+					maxX = obj.centralPos[X]
+					minX = obj.centralPos[X]
+					maxY = obj.centralPos[Y]
+					minY = obj.centralPos[Y]
+					maxZ = obj.centralPos[Z]
+					maxN = obj.centralPos[Z]
+					break
+				
+				for obj in self.sceneObjects:
+					if obj.centralPos[X] > maxX:
+						maxX = obj.centralPos[X]
+					if obj.centralPos[X] < minX:
+						minX = obj.centralPos[X] 
+					if obj.centralPos[Y] > maxY:
+						maxY = obj.centralPos[Y]
+					if obj.centralPos[Y] < minY:
+						minY = obj.centralPos[Y]
+					if obj.centralPos[Z] > maxZ:
+						maxZ = obj.centralPos[Z]
+					
+				maxN = max(abs(maxX-minX),abs(maxY-minY))
+				self.position[X] = (minX+maxX)/2.0
+				self.position[Y] = (minY+maxY)/2.0
+				self.position[Z] = maxN/tan(22.5*pi/180) + abs(maxZ) + 2
+					
+			else:
+				self.position[X] = 0
+				self.position[Y] = 0
+				self.position[Z] = 3
+				
+			self.updateGL()
 		else:
 			pass
 		
@@ -271,7 +304,7 @@ class GlWidget(QGLWidget):
 		self.mousePos[X] = self.mapFromGlobal(QCursor.pos()).x()
 		self.mousePos[Y] = glGetIntegerv(GL_VIEWPORT)[3] - screenY - 1
 		self.mousePos[Z] = glReadPixels(self.mousePos[X], self.mousePos[Y],
-									    1, 1, GL_DEPTH_COMPONENT, GL_FLOAT)
+										1, 1, GL_DEPTH_COMPONENT, GL_FLOAT)
 			
 	def getMouseScenePosition(self):
 		"""
