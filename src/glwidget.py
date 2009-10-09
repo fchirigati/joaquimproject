@@ -44,14 +44,26 @@ class GlWidget(QGLWidget):
 		# Camera's scale factor.
 		self.scale = numpy.array([1.0, 1.0, 1.0])
 		# Near/far clipping plane values.
-		self.near, self.far = 1, 21
+		self.near, self.far = 1, 200
 		# Perspective angle (in degrees).
 		self.fovAngle = 45
 		
 		# Scene's arcball.
 		self.boundingSphere = SceneArcBall(self)
 		
+		# Initial and final positions of the translation.
+		self.initPosition = numpy.zeros(4)
+		self.finalPosition = numpy.zeros(4)
+		
+		# Indicates whether Ctrl is pressed or not.
 		self.ctrl = False
+		
+		# Indicates whether the tranlation mode is activated or not.
+		self.translating = False
+		
+		# Indicates whether there was a translation or not.
+		self.objTranslated = False
+		
 		self.isClicked = False
 		self.z = 0.0
 		self.z2 = 0.0
@@ -92,19 +104,27 @@ class GlWidget(QGLWidget):
 		Mouse movement callback.
 		"""
 		
+		# Translation
+		if self.translating:
+			self.updateMousePosition()
+			self.handleTranslation()
+			self.updateGL()
+		
+		# Zoom
 		self.z = self.mousePos[Y]
 		if self.applyZoom:
 			if self.z > self.z2:
-				self.position[Z] += 0.2
+				self.position[Z] -= 0.2
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
 				self.updateGL()
 			else:
-				self.position[Z] -= 0.2
+				self.position[Z] += 0.2
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
-				self.updateGL() 
+				self.updateGL()
 		
+		# Rotation
 		if self.isClicked:
 			self.updateMousePosition()
 			
@@ -136,7 +156,9 @@ class GlWidget(QGLWidget):
 		self.updateMousePosition()
 		btn = ev.button()
 		if (btn == Qt.LeftButton):
-			self.handlePicking(self.mousePos[X], self.mousePos[Y])
+			self.initPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
+											 self.mousePos[Z], 1])
+			self.translating = True
 		elif (btn == Qt.RightButton):
 			self.isClicked = True
 			if len(self.selectedObjects) == 0:
@@ -168,6 +190,14 @@ class GlWidget(QGLWidget):
 			self.updateGL()
 			
 		self.applyZoom = False
+		
+		if not(self.objTranslated) and self.translating:
+			# If the objects or the scene were not translated, apply picking method
+			self.handlePicking(self.mousePos[X], self.mousePos[Y])
+		else:
+			self.objTranslated = False
+			
+		self.translating = False
 
 	def enterEvent(self, ev):
 		"""
@@ -240,11 +270,12 @@ class GlWidget(QGLWidget):
 		screenY = self.mapFromGlobal(QCursor.pos()).y()
 		self.mousePos[X] = self.mapFromGlobal(QCursor.pos()).x()
 		self.mousePos[Y] = glGetIntegerv(GL_VIEWPORT)[3] - screenY - 1
+		self.mousePos[Z] = glReadPixels(self.mousePos[X], self.mousePos[Y],
+									    1, 1, GL_DEPTH_COMPONENT, GL_FLOAT)
 			
 	def getMouseScenePosition(self):
 		"""
 		Gets the coordinates of the mouse in the scene.
-		Since we cannot recover the Z coordinate, we just give it a fixed value: 0.5.
 		"""
 		
 		self.updateMousePosition()
@@ -315,6 +346,26 @@ class GlWidget(QGLWidget):
 		
 		#if not self.rotating:
 		#glDepthMask(GL_TRUE)
+		
+	def handleTranslation(self):
+		"""
+		Handles object translation when the user drags the object with the mouse's left button.
+		"""
+		
+		self.finalPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
+										  self.mousePos[Z], 1])
+		shift = vector(self.initPosition, self.finalPosition)
+		
+		if ((shift[0] != 0) or (shift[1] != 0) or (shift[2] != 0)):
+			self.objTranslated = True
+			
+		shift = shift/100
+		if len(self.selectedObjects) == 0:
+			self.position = applyVector(self.position, -shift)
+		else:
+			for obj in self.selectedObjects:
+				obj.setCentralPosition(applyVector(obj.getCentralPosition(), shift))
+		self.initPosition = self.finalPosition
 			
 	def handlePicking(self, x, y):
 		"""

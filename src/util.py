@@ -9,7 +9,9 @@ Z = 2
 W = 3
 
 def crossProduct(a, b):
-	"""Returns the cross product between two 3-component vectors."""
+	"""
+	Returns the cross product between two 3-component vectors.
+	"""
 	
 	assert(len(a) == 3 and len(b) == 3) or (len(a) == 4 and len(b) == 4)
 	
@@ -22,7 +24,10 @@ def crossProduct(a, b):
 	return retVec
 
 def multiplyByMatrix(vector):
-	"""Multiplies a given vector by the current matrix on the current GLMatrixMode stack, then returns the result."""
+	"""
+	Multiplies a given vector by the current matrix on the current
+	GLMatrixMode stack, then returns the result.
+	"""
 	
 	assert(len(vector) == 4)
 	
@@ -50,7 +55,9 @@ def multiplyByMatrix(vector):
 	return numpy.array(retVec)
 
 def matrixByMatrix(a, b):
-	"""Multiplies two matrices (a x b) and returns the result."""
+	"""
+	Multiplies two matrices (a x b) and returns the result.
+	"""
 	
 	glMode = glGetInteger(GL_MATRIX_MODE)
 	assert(glMode == GL_MODELVIEW or glMode == GL_PROJECTION)
@@ -67,7 +74,9 @@ def matrixByMatrix(a, b):
 	return retMatrix
 
 def distance(a, b):
-	""""Returns the distance between two vectors/points."""
+	"""
+	Returns the distance between two vectors/points.
+	"""
 	
 	assert(len(a) == len(b))
 	
@@ -78,14 +87,18 @@ def distance(a, b):
 	return sqrt(sum)
 
 def angle(a, b):
-	"""Returns the angle between two vectors in degrees."""
+	"""
+	Returns the angle between two vectors in degrees.
+	"""
 	
 	assert(len(a) == len(b))
 	
 	return acos(numpy.dot(a, b) / (lengthVector(a) * lengthVector(b))) * 180 / pi
 
 def lengthVector(a):
-	"""Returns the length of a given vector."""
+	"""
+	Returns the length of a given vector.
+	"""
 	
 	sum = 0
 	for i in range(len(a)):
@@ -94,8 +107,10 @@ def lengthVector(a):
 	return sqrt(sum)
 
 def arrayToVector(array, newElement=None):
-	"""Returns the numpy representation of a vector given an array.
-	Optionally, adds an element to the end of the array."""
+	"""
+	Returns the numpy representation of a vector given an array.
+	Optionally, adds an element to the end of the array.
+	"""
 	
 	length = len(array)
 	if newElement != None:
@@ -109,3 +124,30 @@ def arrayToVector(array, newElement=None):
 		retVec[length-1] = newElement
 	
 	return retVec
+
+def vector(point_1, point_2):
+	"""
+	Returns the vector between two given points.
+	Note that point_2 is the destination point.
+	"""
+	
+	assert((len(point_1) == 4) and (len(point_2) == 4))
+	
+	vector = numpy.zeros(4)
+	for i in range(3):
+		vector[i] = point_2[i] - point_1[i]
+	
+	return vector
+
+def applyVector(point, vector):
+	"""
+	Apply a shift (vector) to point, returning the new point.
+	"""
+	
+	assert((len(point) == 4) and (len(vector) == 4))
+	
+	new_point = numpy.zeros(4)
+	for i in range(3):
+		new_point[i] = point[i] + vector[i]
+	
+	return new_point
