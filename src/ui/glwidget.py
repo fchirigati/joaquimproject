@@ -266,8 +266,9 @@ class GlWidget(QGLWidget):
 		Event called when mouse's left button is pressed.
 		"""
 		
-		self.initPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
-										 self.mousePos[Z], 1])
+		self.initPosition = self.getMouseScenePosition()
+		#self.initPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
+		#								 self.mousePos[Z], 1])
 		self.translating = True
 		
 	def rightButtonEvent(self):
@@ -447,22 +448,16 @@ class GlWidget(QGLWidget):
 		glMatrixMode(GL_MODELVIEW)
 		glLoadIdentity()
 		
-		gluLookAt(self.position[X], self.position[Y], self.position[Z], \
-				self.position[X] + self.pointer[X], self.position[Y] + self.pointer[Y], self.position[Z] + self.pointer[Z], \
-				self.upVector[X], self.upVector[Y], self.upVector[Z])
+		gluLookAt(self.position[X], self.position[Y], self.position[Z],
+				  self.position[X] + self.pointer[X], self.position[Y] + self.pointer[Y],
+				  self.position[Z] + self.pointer[Z], self.upVector[X],
+				  self.upVector[Y], self.upVector[Z])
 		glScale(self.scale[X], self.scale[Y], self.scale[Z])
 		
-	def render(self):
+	def __setLighting(self):
 		"""
-		Renders the scene.
-		Warning: This method sets the matrix mode to GL_MODELVIEW.
+		Sets the lighting of the scene.
 		"""
-		
-		glMatrixMode(GL_PROJECTION)
-		glLoadIdentity()
-		gluPerspective(self.fovAngle, float(self.wWidth)/self.wHeight, self.near, self.far)
-		
-		self.__setCameraView()
 		
 		light0_pos = [1.0, 1.0, 1.0, 0]
 		diffuse0 = [1.0, 1.0, 1.0, 1.0]
@@ -474,9 +469,16 @@ class GlWidget(QGLWidget):
 		glLightfv(GL_LIGHT0, GL_SPECULAR, specular0)
 		glLightfv(GL_LIGHT0, GL_AMBIENT, ambient0)
 		
-		# Creates a small white wire sphere and the XYZ axis in the 0 coordinate, just for refernece.
+	def __renderAxis(self):
+		"""
+		Creates a small white wire sphere and the XYZ axis in the 0 coordinate, just for reference.
+		"""
+		
+		# White wire
 		glColor(1, 1, 1)
 		glutWireSphere(0.1, 20, 20)
+		
+		# XYZ axis
 		glLineWidth(2)
 		glDisable(GL_LIGHTING)
 		glBegin(GL_LINES)
@@ -493,13 +495,12 @@ class GlWidget(QGLWidget):
 		glEnable(GL_LIGHTING)
 		glLineWidth(1)
 		
-		for obj in self.sceneObjects:
-			glPushMatrix()
-			obj.render()
-			glPopMatrix()
-			
-		# Create a small wire sphere centered on the scene's rotation center
-		# that approximatly bounds the visualization volume.
+	def __arcBallReference(self):
+		"""
+		Creates a small wire sphere centered on the scene's rotation center
+		that approximatly bounds the visualization volume.
+		"""
+		
 		if self.rotating:
 			alpha = 0.6
 		else:
@@ -511,29 +512,67 @@ class GlWidget(QGLWidget):
 		glDisable(GL_LIGHTING)
 		glutWireSphere(10, 20, 20)
 		glEnable(GL_LIGHTING)
-		glTranslate(*-rotCenter)
+		glTranslate(*-rotCenter)	
+		
+	def render(self):
+		"""
+		Renders the scene.
+		Warning: This method sets the matrix mode to GL_MODELVIEW.
+		"""
+		
+		glMatrixMode(GL_PROJECTION)
+		glLoadIdentity()
+		gluPerspective(self.fovAngle, float(self.wWidth)/self.wHeight, self.near, self.far)
+		
+		# Camera
+		self.__setCameraView()
+		
+		# Lighting
+		self.__setLighting()
+		
+		# Reference of the XYZ axis
+		self.__renderAxis()
+		
+		for obj in self.sceneObjects:
+			glPushMatrix()
+			obj.render()
+			glPopMatrix()
+			
+		# ArcBall reference
+		self.__arcBallReference()
 		
 		#if not self.rotating:
-		#glDepthMask(GL_TRUE)
+		#	glDepthMask(GL_TRUE)
 		
 	def handleTranslation(self):
 		"""
 		Handles object translation when the user drags the object with the mouse's left button.
 		"""
 		
-		self.finalPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
-										  self.mousePos[Z], 1])
+		self.finalPosition = self.getMouseScenePosition()
+		#self.finalPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
+		#								  self.mousePos[Z], 1])
 		shift = vector(self.initPosition, self.finalPosition)
 		
 		if ((shift[0] != 0) or (shift[1] != 0) or (shift[2] != 0)):
 			self.objTranslated = True
 			
-		shift = shift/100
 		if len(self.selectedObjects) == 0:
-			self.position = applyVector(self.position, -shift)
+			self.position = applyVector(self.position, -shift/1.1)
+#		elif len(self.selectedObjects) == 1:
+#			obj = self.selectedObjects[0]
+#			p = Plane(self.pointer, obj.getCentralPosition())
+#			print "A:", p.A
+#			print "B:", p.B
+#			print "C:", p.C
+#			print "D:", p.D
+#			v = applyVector(obj.getCentralPosition(), shift*5)
+#			if p.containsPoint(v):
+#				obj.setCentralPosition(v)
+#			del p
 		else:
 			for obj in self.selectedObjects:
-				obj.setCentralPosition(applyVector(obj.getCentralPosition(), shift))
+				obj.setCentralPosition(applyVector(obj.getCentralPosition(), shift*5))
 		self.initPosition = self.finalPosition
 			
 	def handlePicking(self, x, y):

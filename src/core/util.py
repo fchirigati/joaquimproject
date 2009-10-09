@@ -8,6 +8,46 @@ Y = 1
 Z = 2
 W = 3
 
+class Plane(object):
+	"""
+	Class that defines a plane.
+	"""
+	
+	def __init__(self, vector, point):
+		"""
+		Constructor.
+		It creates a plane based on a normal vector and a point.
+		"""
+		
+		# Constants.
+		self.A = 0.0
+		self.B = 0.0
+		self.C = 0.0
+		self.D = 0.0
+		
+		assert((len(point) == 4) and (len(vector) == 4))
+		
+		self.A = vector[0]
+		self.B = vector[1]
+		self.C = vector[2]
+		
+		self.D = -((self.A*point[0]) + (self.B*point[1]) + (self.C*point[2]))
+		
+	def containsPoint(self, point):
+		"""
+		Returns True if point belongs to the plane, and False otherwise.
+		"""
+		
+		assert(len(point) == 4)
+		
+		D_point = -((self.A*point[0]) + (self.B*point[1]) + (self.C*point[2]))
+		print "D_point:", D_point
+		
+		if abs(D_point - self.D) < 0.0001:
+			return True
+		else:
+			return False
+
 def crossProduct(a, b):
 	"""
 	Returns the cross product between two 3-component vectors.
