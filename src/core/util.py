@@ -189,5 +189,6 @@ def applyVector(point, vector):
 	new_point = numpy.zeros(4)
 	for i in range(3):
 		new_point[i] = point[i] + vector[i]
+	new_point[3] = 1
 	
 	return new_point

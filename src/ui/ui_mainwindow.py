@@ -1,7 +1,17 @@
 from PyQt4 import QtCore, QtGui
+from glwidget import GlWidget
 
 class Ui_MainWindow(object):
+    """
+    Interface for the main window.
+    Done with the QtDesigner.
+    """
+    
     def setupUi(self, MainWindow):
+        """
+        Defines the widgets.
+        """
+        
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(554, 375)
         self.centralwidget = QtGui.QWidget(MainWindow)
@@ -30,8 +40,10 @@ class Ui_MainWindow(object):
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
+        """
+        Defines the titles of window and menu.
+        """
+        
         MainWindow.setWindowTitle(QtGui.QApplication.translate("MainWindow", "Joaquim", None, QtGui.QApplication.UnicodeUTF8))
         self.menuFile.setTitle(QtGui.QApplication.translate("MainWindow", "File", None, QtGui.QApplication.UnicodeUTF8))
         self.actionQuit.setText(QtGui.QApplication.translate("MainWindow", "Quit", None, QtGui.QApplication.UnicodeUTF8))
-
-from glwidget import GlWidget
