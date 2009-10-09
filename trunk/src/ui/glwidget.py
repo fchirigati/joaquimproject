@@ -103,13 +103,94 @@ class GlWidget(QGLWidget):
 		"""
 		Mouse movement callback.
 		"""
+		
 		# Translation
+		self.translationMoveEvent()
+		
+		# Zoom
+		self.zoomMoveEvent()
+		
+		# Rotation
+		self.rotationMoveEvent()
+		
+	def mousePressEvent(self, ev):
+		"""
+		Mouse press callback.
+		"""
+		
+		self.updateMousePosition()
+		btn = ev.button()
+		if (btn == Qt.LeftButton):
+			self.leftButtonEvent()
+		elif (btn == Qt.RightButton):
+			self.rightButtonEvent()
+		elif (btn == Qt.MidButton):
+			self.midButtonEvent()
+			
+		print "Click (%i, %i)" % (self.mousePos[X], self.mousePos[Y])
+		
+	def mouseReleaseEvent(self, ev):
+		"""
+		Mouse release callback.
+		"""
+		
+		self.updateMousePosition()
+		
+		# Rotation
+		self.rotationReleaseEvent()
+			
+		# Zoom
+		self.zoomReleaseEvent()
+		
+		# Translation
+		self.translationReleaseEvent()
+
+	def enterEvent(self, ev):
+		"""
+		Event called when the mouse enters the widget area.
+		"""
+		
+		self.setFocus()
+		self.grabKeyboard()
+		
+	def leaveEvent(self, ev):
+		"""
+		Event called when the mouse leaves the widget area.
+		"""
+		
+		self.parent().setFocus()
+		self.releaseKeyboard()
+		
+	def translationMoveEvent(self):
+		"""
+		Translation event called inside mouseMoveEvent().
+		"""
+		
 		if self.translating:
 			self.updateMousePosition()
 			self.handleTranslation()
 			self.updateGL()
+		else:
+			pass
 		
-		# Zoom
+	def translationReleaseEvent(self):
+		"""
+		Translation event called inside mouseReleaseEvent().
+		"""
+		
+		if not(self.objTranslated) and self.translating:
+			# If the objects or the scene were not translated, apply picking method
+			self.handlePicking(self.mousePos[X], self.mousePos[Y])
+		else:
+			self.objTranslated = False
+			
+		self.translating = False
+		
+	def zoomMoveEvent(self):
+		"""
+		Zoom event called inside mouseMoveEvent().
+		"""
+		
 		self.z = self.mousePos[Y]
 		if self.applyZoom:
 			if self.z > self.z2:
@@ -122,8 +203,21 @@ class GlWidget(QGLWidget):
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
 				self.updateGL()
+		else:
+			pass
 		
-		# Rotation
+	def zoomReleaseEvent(self):
+		"""
+		Zoom event called inside mouseReleaseEvent().
+		"""
+		
+		self.applyZoom = False
+		
+	def rotationMoveEvent(self):
+		"""
+		Rotation event called inside mouseMoveEvent().
+		"""
+		
 		if self.isClicked:
 			self.updateMousePosition()
 			
@@ -141,43 +235,20 @@ class GlWidget(QGLWidget):
 				self.upVector = multiplyByMatrix(self.upVector)
 				self.pointer = multiplyByMatrix(self.pointer)
 				glPopMatrix()
+				
 			else:
 				for obj in self.selectedObjects:
 					obj.rightClickMoveEvent(self.mousePos[X], self.mousePos[Y])
 			
 			self.updateGL()
 		
-	def mousePressEvent(self, ev):
-		"""
-		Mouse press callback.
-		"""
+		else:
+			pass
 		
-		self.updateMousePosition()
-		btn = ev.button()
-		if (btn == Qt.LeftButton):
-			self.initPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
-											 self.mousePos[Z], 1])
-			self.translating = True
-		elif (btn == Qt.RightButton):
-			self.isClicked = True
-			if len(self.selectedObjects) == 0:
-				self.boundingSphere.setInitialPt(self.mousePos[X], self.mousePos[Y])
-				self.rotating = True
-			else:
-				for obj in self.selectedObjects:
-					obj.rightClickEvent(self.mousePos[X], self.mousePos[Y])
-		elif (btn == Qt.MidButton):
-			self.applyZoom = True
-			self.z = self.mousePos[Y]
-			
-		print "Click (%i, %i)" % (self.mousePos[X], self.mousePos[Y])
-		
-	def mouseReleaseEvent(self, ev):
+	def rotationReleaseEvent(self):
 		"""
-		Mouse release callback.
+		Rotation event called inside mouseReleaseEvent().
 		"""
-		
-		self.updateMousePosition()
 		
 		if self.isClicked:
 			if len(self.selectedObjects) > 0:
@@ -187,32 +258,38 @@ class GlWidget(QGLWidget):
 				self.rotating = False
 			self.isClicked = False
 			self.updateGL()
-			
-		self.applyZoom = False
-		
-		if not(self.objTranslated) and self.translating:
-			# If the objects or the scene were not translated, apply picking method
-			self.handlePicking(self.mousePos[X], self.mousePos[Y])
 		else:
-			self.objTranslated = False
-			
-		self.translating = False
-
-	def enterEvent(self, ev):
+			pass
+		
+	def leftButtonEvent(self):
 		"""
-		Event called when the mouse enters the widget area.
+		Event called when mouse's left button is pressed.
 		"""
 		
-		self.setFocus()
-		self.grabKeyboard()
+		self.initPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
+										 self.mousePos[Z], 1])
+		self.translating = True
 		
-	def leaveEvent(self, ev):
+	def rightButtonEvent(self):
 		"""
-		Event called when the mouse leaves the widget area.
+		Event called when mouse's right button is pressed.
 		"""
 		
-		self.parent().setFocus()
-		self.releaseKeyboard()
+		self.isClicked = True
+		if len(self.selectedObjects) == 0:
+			self.boundingSphere.setInitialPt(self.mousePos[X], self.mousePos[Y])
+			self.rotating = True
+		else:
+			for obj in self.selectedObjects:
+				obj.rightClickEvent(self.mousePos[X], self.mousePos[Y])
+				
+	def midButtonEvent(self):
+		"""
+		Event called when mouse's middle button is pressed.
+		"""
+		
+		self.applyZoom = True
+		self.z = self.mousePos[Y]
 
 	def keyPressEvent(self, ev):
 		"""
@@ -221,79 +298,120 @@ class GlWidget(QGLWidget):
 		
 		self.updateMousePosition()
 		key = str(ev.text()).upper()
+		
 		if (ev.modifiers() & Qt.ControlModifier):
 			self.ctrl = True
+			
 		if (key == "C"):
-			newCube = Cube(0.5, self, False)
-			newCube.setCentralPosition(self.getMouseScenePosition())
-			newCube.setRotationMatrix(self.rotation)
-			self.sceneObjects.append(newCube)
-			self.updateGL()
+			self.drawCube()
+			
 		elif (key == "E"):
-			newSphere = Sphere(0.5, self, False)
-			newSphere.setCentralPosition(self.getMouseScenePosition())
-			newSphere.setRotationMatrix(self.rotation)
-			self.sceneObjects.append(newSphere)
-			self.updateGL()
+			self.drawSphere()
+			
 		elif (key == "X"):
-			for obj in self.selectedObjects:
-				self.sceneObjects.remove(obj)
-			del self.selectedObjects[:]
-			self.updateGL()
+			self.deleteObjects()
+			
 		elif (key == "W"):
 			self.position[Y] += 0.2
 			self.updateGL()
+			
 		elif (key == "S"):
 			self.position[Y] -= 0.2
 			self.updateGL()
+			
 		elif (key == "A"):
 			self.position[X] -= 0.3
 			self.updateGL()
+			
 		elif (key == "D"):
 			self.position[X] += 0.3
 			self.updateGL()
 			
 		elif (ev.key() == Qt.Key_Home):
+			self.homeKeyPressEvent()
 			
-			if len(self.sceneObjects) > 0:
-				for obj in self.sceneObjects:
-					maxX = obj.centralPos[X]
-					minX = obj.centralPos[X]
-					maxY = obj.centralPos[Y]
-					minY = obj.centralPos[Y]
-					maxZ = obj.centralPos[Z]
-					maxN = obj.centralPos[Z]
-					break
-				
-				for obj in self.sceneObjects:
-					if obj.centralPos[X] > maxX:
-						maxX = obj.centralPos[X]
-					if obj.centralPos[X] < minX:
-						minX = obj.centralPos[X] 
-					if obj.centralPos[Y] > maxY:
-						maxY = obj.centralPos[Y]
-					if obj.centralPos[Y] < minY:
-						minY = obj.centralPos[Y]
-					if obj.centralPos[Z] > maxZ:
-						maxZ = obj.centralPos[Z]
-					
-				maxN = max(abs(maxX-minX),abs(maxY-minY))
-				self.position[X] = (minX+maxX)/2.0
-				self.position[Y] = (minY+maxY)/2.0
-				self.position[Z] = maxN/tan(22.5*pi/180) + abs(maxZ) + 2
-					
-			else:
-				self.position[X] = 0
-				self.position[Y] = 0
-				self.position[Z] = 3
-				
-			self.updateGL()
 		else:
 			pass
 		
 	def keyReleaseEvent(self, ev):
+		"""
+		Key release callback.
+		"""
+		
 		if (ev.key() == Qt.Key_Control):
 			self.ctrl = False
+			
+	def drawCube(self):
+		"""
+		Draws a new cube.
+		"""
+		
+		newCube = Cube(0.5, self, False)
+		print self.getMouseScenePosition()
+		newCube.setCentralPosition(self.getMouseScenePosition())
+		newCube.setRotationMatrix(self.rotation)
+		self.sceneObjects.append(newCube)
+		self.updateGL()
+		
+	def drawSphere(self):
+		"""
+		Draws a new sphere.
+		"""
+		
+		newSphere = Sphere(0.5, self, False)
+		newSphere.setCentralPosition(self.getMouseScenePosition())
+		newSphere.setRotationMatrix(self.rotation)
+		self.sceneObjects.append(newSphere)
+		self.updateGL()
+		
+	def deleteObjects(self):
+		"""
+		Deletes all selected objects.
+		"""
+		
+		for obj in self.selectedObjects:
+			self.sceneObjects.remove(obj)
+		del self.selectedObjects[:]
+		self.updateGL()
+		
+	def homeKeyPressEvent(self):
+		"""
+		Event called when HOME key is pressed.
+		"""
+		
+		if len(self.sceneObjects) > 0:
+			for obj in self.sceneObjects:
+				maxX = obj.centralPos[X]
+				minX = obj.centralPos[X]
+				maxY = obj.centralPos[Y]
+				minY = obj.centralPos[Y]
+				maxZ = obj.centralPos[Z]
+				maxN = obj.centralPos[Z]
+				break
+			
+			for obj in self.sceneObjects:
+				if obj.centralPos[X] > maxX:
+					maxX = obj.centralPos[X]
+				if obj.centralPos[X] < minX:
+					minX = obj.centralPos[X] 
+				if obj.centralPos[Y] > maxY:
+					maxY = obj.centralPos[Y]
+				if obj.centralPos[Y] < minY:
+					minY = obj.centralPos[Y]
+				if obj.centralPos[Z] > maxZ:
+					maxZ = obj.centralPos[Z]
+				
+			maxN = max(abs(maxX-minX),abs(maxY-minY))
+			self.position[X] = (minX+maxX)/2.0
+			self.position[Y] = (minY+maxY)/2.0
+			self.position[Z] = maxN/tan(22.5*pi/180) + abs(maxZ) + 2
+				
+		else:
+			self.position[X] = 0
+			self.position[Y] = 0
+			self.position[Z] = 3
+			
+		self.updateGL()
 		
 	def updateMousePosition(self):
 		"""
@@ -303,8 +421,8 @@ class GlWidget(QGLWidget):
 		screenY = self.mapFromGlobal(QCursor.pos()).y()
 		self.mousePos[X] = self.mapFromGlobal(QCursor.pos()).x()
 		self.mousePos[Y] = glGetIntegerv(GL_VIEWPORT)[3] - screenY - 1
-		self.mousePos[Z] = glReadPixels(self.mousePos[X], self.mousePos[Y],
-										1, 1, GL_DEPTH_COMPONENT, GL_FLOAT)
+		#self.mousePos[Z] = glReadPixels(self.mousePos[X], self.mousePos[Y],
+		#								1, 1, GL_DEPTH_COMPONENT, GL_FLOAT)
 			
 	def getMouseScenePosition(self):
 		"""
@@ -312,8 +430,8 @@ class GlWidget(QGLWidget):
 		"""
 		
 		self.updateMousePosition()
-		#self.mousePosZ = glReadPixels(self.mousePos[X], self.mousePos[Y], 1, 1, 
-		#							  GL_DEPTH_COMPONENT, GL_FLOAT)
+
+		# Objects are created in mousePos[Z] = 0.5.
 		self.mousePos[Z] = 0.5
 		
 		coordPosition = gluUnProject(*self.mousePos)
