@@ -6,9 +6,9 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 import numpy
 
-from objects import *
-from arcball import *
-from util import *
+from core.objects import *
+from core.arcball import *
+from core.util import *
 
 class GlWidget(QGLWidget):
 	"""
@@ -356,25 +356,43 @@ class GlWidget(QGLWidget):
 		glLightfv(GL_LIGHT0, GL_SPECULAR, specular0)
 		glLightfv(GL_LIGHT0, GL_AMBIENT, ambient0)
 		
-		# Create a small white wire sphere in the 0 coordinate, just for refernece.
+		# Creates a small white wire sphere and the XYZ axis in the 0 coordinate, just for refernece.
 		glColor(1, 1, 1)
 		glutWireSphere(0.1, 20, 20)
+		glLineWidth(2)
+		glDisable(GL_LIGHTING)
+		glBegin(GL_LINES)
+		glColor(1, 0, 0)
+		glVertex(0, 0, 0)
+		glVertex(1, 0, 0)
+		glColor(0, 1, 0)
+		glVertex(0, 0, 0)
+		glVertex(0, 1, 0)
+		glColor(0, 0, 1)
+		glVertex(0, 0, 0)
+		glVertex(0, 0, 1)
+		glEnd()
+		glEnable(GL_LIGHTING)
+		glLineWidth(1)
 		
 		for obj in self.sceneObjects:
 			glPushMatrix()
 			obj.render()
 			glPopMatrix()
 			
-		# Create a small white sphere in the center of the scene's rotation center, just for refernece.
+		# Create a small wire sphere centered on the scene's rotation center
+		# that approximatly bounds the visualization volume.
 		if self.rotating:
-			alpha = 1
+			alpha = 0.6
 		else:
 			alpha = 0.2
 			
 		rotCenter = (self.position + self.pointer*10)[:3]
-		glColor4f(0.3, 0.6, 1, alpha)
+		glColor4f(0.1, 0.3, 0.5, alpha)
 		glTranslate(*rotCenter)
+		glDisable(GL_LIGHTING)
 		glutWireSphere(10, 20, 20)
+		glEnable(GL_LIGHTING)
 		glTranslate(*-rotCenter)
 		
 		#if not self.rotating:

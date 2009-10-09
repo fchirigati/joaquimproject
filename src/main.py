@@ -1,9 +1,9 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-import mainwindow
+from ui.mainwindow import MainWindow
 import sys
 
 app = QApplication(sys.argv)
-form = mainwindow.MainWindow()
+form = MainWindow()
 form.show()
 app.exec_()

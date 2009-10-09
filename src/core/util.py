@@ -1,5 +1,5 @@
 from OpenGL.GL import *
-from math import sqrt, acos, pi
+from math import sqrt, acos, pi, degrees
 import numpy
 
 # Joaquim constants.
@@ -93,7 +93,7 @@ def angle(a, b):
 	
 	assert(len(a) == len(b))
 	
-	return acos(numpy.dot(a, b) / (lengthVector(a) * lengthVector(b))) * 180 / pi
+	return degrees(acos(numpy.dot(a, b) / (lengthVector(a) * lengthVector(b))))
 
 def lengthVector(a):
 	"""
