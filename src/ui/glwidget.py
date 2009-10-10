@@ -434,7 +434,9 @@ class GlWidget(QGLWidget):
 		Moves the camera to the left.
 		"""
 		
-		self.position += self.leftVector*0.1
+		self.position[X] += self.leftVector[X]/10
+		self.position[Y] += self.leftVector[Y]/10
+		self.position[Z] += self.leftVector[Z]/10
 		self.updateGL()
 	
 	def rightCamera(self):
@@ -442,7 +444,10 @@ class GlWidget(QGLWidget):
 		Moves the camera to the right.
 		"""
 		
-		self.position -= self.leftVector*0.1
+		self.position[X] -= self.leftVector[X]/10
+		self.position[Y] -= self.leftVector[Y]/10
+		self.position[Z] -= self.leftVector[Z]/10
+
 		
 		self.updateGL()
 	
@@ -451,7 +456,10 @@ class GlWidget(QGLWidget):
 		Moves the camera forward.
 		"""
 		
-		self.position += self.pointer*0.1
+		self.position[X] += self.pointer[X]/10
+		self.position[Y] += self.pointer[Y]/10
+		self.position[Z] += self.pointer[Z]/10
+
 		
 		self.updateGL()
 	
@@ -460,7 +468,10 @@ class GlWidget(QGLWidget):
 		Moves the camera backward.
 		"""
 		
-		self.position -= self.pointer*0.1
+		self.position[X] -= self.pointer[X]/10
+		self.position[Y] -= self.pointer[Y]/10
+		self.position[Z] -= self.pointer[Z]/10
+
 		
 		self.updateGL()
 		
@@ -469,12 +480,11 @@ class GlWidget(QGLWidget):
 		Resets the camera system.
 		"""
 		
-		self.position = POSITION
-		self.upVector = UPVECTOR
-		self.pointer = POINTER
-		self.leftVector = LEFT_VECTOR
+		self.position = numpy.array([0.0, 0.0, 3.0, 1])
+		self.upVector = numpy.array([0.0, 1.0, 0.0, 0])
+		self.pointer = numpy.array([0.0, 0.0, -1.0, 0])
 		
-		self.fovAngle = FOVY
+		self.leftVector = LEFT_VECTOR
 		
 		self.updateGL()
 		
