@@ -465,8 +465,9 @@ class GlWidget(QGLWidget):
 		
 	def resetCamera(self):
 		"""
-		Reset the camera system.
+		Resets the camera system.
 		"""
+		
 		self.position = numpy.array([0.0, 0.0, 3.0, 1])
 		self.upVector = numpy.array([0.0, 1.0, 0.0, 0])
 		self.pointer = numpy.array([0.0, 0.0, -1.0, 0])
@@ -474,18 +475,30 @@ class GlWidget(QGLWidget):
 		self.updateGL()
 		
 	def tiltUpCamera(self):
+		"""
+		Tilts the camera up.
+		"""
 		
 		pass
 	
 	def tiltDownCamera(self):
+		"""
+		Tilts the camera down.
+		"""
 		
 		pass
 	
 	def tiltLeftCamera(self):
+		"""
+		Tilts the camera left.
+		"""
 		
 		pass
 	
 	def tiltRightCamera(self):
+		"""
+		Tilts the camera right.
+		"""
 		
 		pass
 	
@@ -493,7 +506,6 @@ class GlWidget(QGLWidget):
 		"""
 		Event called when HOME key is pressed.
 		"""
-		sameX = False
 		
 		if len(self.sceneObjects) > 0:
 			obj = self.sceneObjects[0]
