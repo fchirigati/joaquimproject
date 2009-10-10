@@ -9,6 +9,7 @@ import numpy
 from core.objects import *
 from core.arcball import *
 from core.util import *
+from core.plane import *
 
 class GlWidget(QGLWidget):
 	"""
@@ -41,19 +42,19 @@ class GlWidget(QGLWidget):
 		self.upVector = numpy.array([0.0, 1.0, 0.0, 0])
 		# Vector that points to the direction that the camera is looking. Always unitary.
 		self.pointer = numpy.array([0.0, 0.0, -1.0, 0])
-		# Camera's scale factor.
-		self.scale = numpy.array([1.0, 1.0, 1.0])
+		# Unitary vector perpendicular to the upVecor and the pointer, pointing to the left of the camera. 
+		self.leftVector = crossProduct(self.upVector, self.pointer)
 		# Near/far clipping plane values.
 		self.near, self.far = 1, 500
 		# Perspective angle (in degrees).
 		self.fovAngle = 45
 		
 		# Scene's arcball.
-		self.boundingSphere = SceneArcBall(self)
+		self.sceneArcBall = SceneArcBall(self)
 		
-		# Initial and final positions of the translation.
-		self.initPosition = numpy.zeros(4)
-		self.finalPosition = numpy.zeros(4)
+		# Initial and final screen positions of the translation.
+		self.initPosition = numpy.zeros(2)
+		self.finalPosition = numpy.zeros(2)
 		
 		# Indicates whether Ctrl is pressed or not.
 		self.ctrl = False
@@ -224,7 +225,7 @@ class GlWidget(QGLWidget):
 			self.updateMousePosition()
 			
 			if len(self.selectedObjects) == 0:
-				r = self.boundingSphere.setFinalPt(self.mousePos[X], self.mousePos[Y], True)
+				r = self.sceneArcBall.setFinalPt(self.mousePos[X], self.mousePos[Y], True)
 				rotCenter = (self.position + self.pointer*10)[:3]
 				
 				glMatrixMode(GL_MODELVIEW)
@@ -236,6 +237,7 @@ class GlWidget(QGLWidget):
 				self.position = multiplyByMatrix(self.position)
 				self.upVector = multiplyByMatrix(self.upVector)
 				self.pointer = multiplyByMatrix(self.pointer)
+				self.leftVector = multiplyByMatrix(self.leftVector)
 				glPopMatrix()
 				
 			else:
@@ -268,9 +270,8 @@ class GlWidget(QGLWidget):
 		Event called when mouse's left button is pressed.
 		"""
 		
-		self.initPosition = self.getMouseScenePosition()
-		#self.initPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
-		#								 self.mousePos[Z], 1])
+		self.initPosition[X] = self.mousePos[X]
+		self.initPosition[Y] = self.mousePos[Y]
 		self.translating = True
 		
 	def rightButtonEvent(self):
@@ -280,7 +281,7 @@ class GlWidget(QGLWidget):
 		
 		self.isClicked = True
 		if len(self.selectedObjects) == 0:
-			self.boundingSphere.setInitialPt(self.mousePos[X], self.mousePos[Y])
+			self.sceneArcBall.setInitialPt(self.mousePos[X], self.mousePos[Y])
 			self.rotating = True
 		else:
 			for obj in self.selectedObjects:
@@ -367,8 +368,8 @@ class GlWidget(QGLWidget):
 		"""
 		
 		newCube = Cube(0.5, self, False)
-		newCube.setCentralPosition(self.getMouseScenePosition())
-		newCube.setRotationMatrix(self.rotation)
+		newCube.centralPosition = self.getMouseScenePosition()
+		newCube.rotation = self.rotation
 		self.sceneObjects.append(newCube)
 		self.updateGL()
 		
@@ -378,8 +379,8 @@ class GlWidget(QGLWidget):
 		"""
 		
 		newSphere = Sphere(0.5, self, False)
-		newSphere.setCentralPosition(self.getMouseScenePosition())
-		newSphere.setRotationMatrix(self.rotation)
+		newSphere.centralPosition = self.getMouseScenePosition()
+		newSphere.rotation = self.rotation
 		self.sceneObjects.append(newSphere)
 		self.updateGL()
 		
@@ -417,27 +418,18 @@ class GlWidget(QGLWidget):
 	
 	def leftCamera(self):
 		"""
-		Moves the camera left.
+		Moves the camera to the left.
 		"""
 		
-		leftVector = crossProduct(self.upVector, self.pointer)
-		
-		self.position[X] += leftVector[X]/10
-		self.position[Y] += leftVector[Y]/10
-		self.position[Z] += leftVector[Z]/10
-		
+		self.position += self.leftVector*0.1
 		self.updateGL()
 	
 	def rightCamera(self):
 		"""
-		Moves the camera right.
+		Moves the camera to the right.
 		"""
 		
-		leftVector = crossProduct(self.upVector, self.pointer)
-		
-		self.position[X] -= leftVector[X]/10
-		self.position[Y] -= leftVector[Y]/10
-		self.position[Z] -= leftVector[Z]/10
+		self.position -= self.leftVector*0.1
 		
 		self.updateGL()
 	
@@ -446,9 +438,7 @@ class GlWidget(QGLWidget):
 		Moves the camera forward.
 		"""
 		
-		self.position[X] += self.pointer[X]/10
-		self.position[Y] += self.pointer[Y]/10
-		self.position[Z] += self.pointer[Z]/10
+		self.position += self.pointer*0.1
 		
 		self.updateGL()
 	
@@ -457,9 +447,7 @@ class GlWidget(QGLWidget):
 		Moves the camera backward.
 		"""
 		
-		self.position[X] -= self.pointer[X]/10
-		self.position[Y] -= self.pointer[Y]/10
-		self.position[Z] -= self.pointer[Z]/10
+		self.position -= self.pointer*0.1
 		
 		self.updateGL()
 		
@@ -509,26 +497,26 @@ class GlWidget(QGLWidget):
 		
 		if len(self.sceneObjects) > 0:
 			obj = self.sceneObjects[0]
-			maxX = obj.centralPos[X]
-			minX = obj.centralPos[X]
-			maxY = obj.centralPos[Y]
-			minY = obj.centralPos[Y]
-			maxZ = obj.centralPos[Z]
-			minZ = obj.centralPos[Z]
+			maxX = obj.centralPosition[X]
+			minX = obj.centralPosition[X]
+			maxY = obj.centralPosition[Y]
+			minY = obj.centralPosition[Y]
+			maxZ = obj.centralPosition[Z]
+			minZ = obj.centralPosition[Z]
 			
 			for obj in self.sceneObjects:
-				if obj.centralPos[X] > maxX:
-					maxX = obj.centralPos[X]
-				if obj.centralPos[X] < minX:
-					minX = obj.centralPos[X] 
-				if obj.centralPos[Y] > maxY:
-					maxY = obj.centralPos[Y]
-				if obj.centralPos[Y] < minY:
-					minY = obj.centralPos[Y]
-				if obj.centralPos[Z] > maxZ:
-					maxZ = obj.centralPos[Z]
-				if obj.centralPos[Z] < minZ:
-					minZ = obj.centralPos[Z]
+				if obj.centralPosition[X] > maxX:
+					maxX = obj.centralPosition[X]
+				if obj.centralPosition[X] < minX:
+					minX = obj.centralPosition[X] 
+				if obj.centralPosition[Y] > maxY:
+					maxY = obj.centralPosition[Y]
+				if obj.centralPosition[Y] < minY:
+					minY = obj.centralPosition[Y]
+				if obj.centralPosition[Z] > maxZ:
+					maxZ = obj.centralPosition[Z]
+				if obj.centralPosition[Z] < minZ:
+					minZ = obj.centralPosition[Z]
 				
 			sideX = abs(maxX-minX)
 			sideY = abs(maxY-minY)
@@ -595,7 +583,6 @@ class GlWidget(QGLWidget):
 				  self.position[X] + self.pointer[X], self.position[Y] + self.pointer[Y],
 				  self.position[Z] + self.pointer[Z], self.upVector[X],
 				  self.upVector[Y], self.upVector[Z])
-		glScale(self.scale[X], self.scale[Y], self.scale[Z])
 		
 	def __setLighting(self):
 		"""
@@ -684,39 +671,30 @@ class GlWidget(QGLWidget):
 		# Reference to ArcBall
 		self.__renderArcBall()
 		
-		#if not self.rotating:
-		#	glDepthMask(GL_TRUE)
-		
 	def handleTranslation(self):
 		"""
 		Handles object translation when the user drags the object with the mouse's left button.
 		"""
 		
-		self.finalPosition = self.getMouseScenePosition()
-		#self.finalPosition = numpy.array([self.mousePos[X], self.mousePos[Y],
-		#								  self.mousePos[Z], 1])
-		shift = vector(self.initPosition, self.finalPosition)
+		self.finalPosition[X] = self.mousePos[X]
+		self.finalPosition[Y] = self.mousePos[Y]
+		shift = (self.finalPosition - self.initPosition) / self.wHeight
 		
-		if ((shift[0] != 0) or (shift[1] != 0) or (shift[2] != 0)):
+		if (shift[X] != 0) or (shift[Y] != 0):
 			self.objTranslated = True
 			
 		if len(self.selectedObjects) == 0:
-			self.position = applyVector(self.position, -shift/1.1)
-#		elif len(self.selectedObjects) == 1:
-#			obj = self.selectedObjects[0]
-#			p = Plane(self.pointer, obj.getCentralPosition())
-#			print "A:", p.A
-#			print "B:", p.B
-#			print "C:", p.C
-#			print "D:", p.D
-#			v = applyVector(obj.getCentralPosition(), shift*5)
-#			if p.containsPoint(v):
-#				obj.setCentralPosition(v)
-#			del p
+			self.position -= shift[Y]*self.upVector
+			self.position += shift[X]*self.leftVector
 		else:
 			for obj in self.selectedObjects:
-				obj.setCentralPosition(applyVector(obj.getCentralPosition(), shift))
-		self.initPosition = self.finalPosition
+				screenPos = gluProject(*obj.centralPosition[:3])
+				newPos = gluUnProject(self.mousePos[X], self.mousePos[Y], screenPos[Z])
+				for i in range(3):
+					obj.centralPosition[i] = newPos[i]
+			
+		self.initPosition[X] = self.finalPosition[X]
+		self.initPosition[Y] = self.finalPosition[Y]
 			
 	def handlePicking(self, x, y):
 		"""
@@ -783,7 +761,7 @@ class GlWidget(QGLWidget):
 					self.selectedObjects.append(pickedObject)
 			else:
 				# CTRL is pressed.
-				if pickedObject.isSelected():
+				if pickedObject.selected:
 					pickedObject.select(False)
 					self.selectedObjects.remove(pickedObject)
 				else:
