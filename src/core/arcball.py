@@ -71,8 +71,6 @@ class ArcBall(object):
 		viewport = glGetInteger(GL_VIEWPORT)
 		screenBorder = [None, None]
 		perpVector = numpy.array(self.parent.upVector) * self.radius
-		for i in range(3):
-			perpVector[i] *= self.parent.scale[i]
 		
 		glMatrixMode(GL_MODELVIEW)
 		borderPoint = multiplyByMatrix(self.centralPos) + perpVector

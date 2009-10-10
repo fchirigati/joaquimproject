@@ -16,10 +16,10 @@ class BaseObject(object):
 		"""
 		
 		self.rotation = []
-		self.centralPos = []
+		self._centralPos = []
 		
 		# Radius of the bouding sphere that surrounds the object. 
-		self.radius = 0.0
+		self._radius = 0.0
 		self.selected = False
 		self.rotating = False
 		
@@ -33,16 +33,10 @@ class BaseObject(object):
 	def render(self):
 		"""
 		Virtual method that should be overridden in base-classes.
+		Method called when the object should be drawn.
 		"""
 		
 		pass
-			
-	def isSelected(self):
-		"""
-		Indicates whether the object is selected or not.
-		"""
-		
-		return self.selected
 			
 	def select(self, newStatus):
 		"""
@@ -58,6 +52,7 @@ class BaseObject(object):
 			
 	def rightClickEvent(self, x, y):
 		"""
+		TO-DO
 		"""
 		
 		self.rotating = True
@@ -65,6 +60,7 @@ class BaseObject(object):
 	
 	def rightClickMoveEvent(self, x, y):
 		"""
+		TO-DO
 		"""
 		
 		r = self.arcBall.setFinalPt(x, y)
@@ -72,45 +68,29 @@ class BaseObject(object):
 		
 	def rightClickReleaseEvent(self, x, y):
 		"""
+		TO-DO
 		"""
 		
 		self.rotating = False
-	
-	def getRotationMatrix(self):
-		"""
-		Returns the rotation matrix.
-		"""
 		
-		return self.rotation
+	@property
+	def centralPosition(self):
+		return self._centralPos
 		
-	def setRotationMatrix(self, rotationMatrix):
-		"""
-		Defines a new rotation matrix.
-		"""
+	@centralPosition.setter
+	def centralPosition(self, value):
+		self._centralPos = value
+		self.arcBall.setCentralPosition(self._centralPos)
+		print self._centralPos, "\n", self.arcBall.centralPos
 		
-		self.rotation = rotationMatrix
+	@property
+	def radius(self):
+		return self._radius
 		
-	def getCentralPosition(self):
-		"""
-		Returns the central position.
-		"""
-		
-		return self.centralPos
-		
-	def setCentralPosition(self, centralPosition):
-		"""
-		Defines a new central position.
-		"""
-		
-		self.centralPos = centralPosition
-		self.arcBall.setCentralPosition(self.centralPos)
-		
-	def setRadius(self, newRadius):
-		"""
-		"""
-		
-		self.radius = newRadius
-		self.arcBall.radius = self.radius
+	@radius.setter
+	def radius(self, value):
+		self._radius = value
+		self.arcBall.radius = self._radius
 
 class Cube(BaseObject):
 	"""
@@ -125,7 +105,7 @@ class Cube(BaseObject):
 		super(Cube, self).__init__(parent)
 		self.side = side
 		self.wire = wire
-		self.setRadius(side * sqrt(3) / 2.0)
+		self.radius = side * sqrt(3) / 2.0
 		
 	def render(self):
 		"""
@@ -133,7 +113,7 @@ class Cube(BaseObject):
 		"""
 		
 		glColor3f(self.r, self.g, self.b)
-		glTranslate(self.centralPos[X], self.centralPos[Y], self.centralPos[Z])
+		glTranslate(self._centralPos[X], self._centralPos[Y], self._centralPos[Z])
 		glMultMatrixf(self.rotation)
 		if self.wire:
 			glutWireCube(self.side)
@@ -142,7 +122,7 @@ class Cube(BaseObject):
 			
 		if self.rotating:
 			glColor(0.3, 0.6, 1)
-			glutWireSphere(self.radius + 0.005, 20, 20)
+			glutWireSphere(self._radius + 0.005, 20, 20)
 		
 class Sphere(BaseObject):
 	"""
@@ -156,7 +136,7 @@ class Sphere(BaseObject):
 		
 		super(Sphere, self).__init__(parent)
 		self.wire = wire
-		self.setRadius(radius)
+		self.radius = radius
 		
 	def render(self):
 		"""
@@ -164,15 +144,15 @@ class Sphere(BaseObject):
 		"""
 		
 		glColor(self.r, self.g, self.b)
-		glTranslate(self.centralPos[X], self.centralPos[Y], self.centralPos[Z])
+		glTranslate(self._centralPos[X], self._centralPos[Y], self._centralPos[Z])
 		glMultMatrixf(self.rotation)
 		
 		if self.wire:
-			glutWireSphere(self.radius, 20, 20)
+			glutWireSphere(self._radius, 20, 20)
 		else:
-			glutSolidSphere(self.radius, 20, 20)
+			glutSolidSphere(self._radius, 20, 20)
 			
 		if self.rotating:
 			glColor(0.3, 0.6, 1)
-			glutWireSphere(self.radius + 0.005, 20, 20)
+			glutWireSphere(self._radius + 0.005, 20, 20)
 		
