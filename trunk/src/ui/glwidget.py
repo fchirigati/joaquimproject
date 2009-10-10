@@ -16,6 +16,19 @@ class GlWidget(QGLWidget):
 	Our implementation of QGLWidget widget. :) - Joaquim, el gato. Meow...
 	"""
 	
+	# Camera and perspective constants.
+	global POSITION
+	global UPVECTOR
+	global POINTER
+	global LEFT_VECTOR
+	global FOVY
+	
+	POSITION = numpy.array([0.0, 0.0, 3.0, 1])
+	UPVECTOR = numpy.array([0.0, 1.0, 0.0, 0])
+	POINTER = numpy.array([0.0, 0.0, -1.0, 0])
+	LEFT_VECTOR = crossProduct(UPVECTOR, POINTER)
+	FOVY = 45
+	
 	def __init__ (self, parent=None):
 		"""
 		Widget constructor.
@@ -37,17 +50,17 @@ class GlWidget(QGLWidget):
 		self.mousePos = numpy.zeros(3)
 		
 		# Camera's absolute position in world coordinates.
-		self.position = numpy.array([0.0, 0.0, 3.0, 1])
+		self.position = POSITION
 		# Camera's up vector. Should always be unitary.
-		self.upVector = numpy.array([0.0, 1.0, 0.0, 0])
+		self.upVector = UPVECTOR
 		# Vector that points to the direction that the camera is looking. Always unitary.
-		self.pointer = numpy.array([0.0, 0.0, -1.0, 0])
+		self.pointer = POINTER
 		# Unitary vector perpendicular to the upVecor and the pointer, pointing to the left of the camera. 
-		self.leftVector = crossProduct(self.upVector, self.pointer)
+		self.leftVector = LEFT_VECTOR
 		# Near/far clipping plane values.
 		self.near, self.far = 1, 500
 		# Perspective angle (in degrees).
-		self.fovAngle = 45
+		self.fovAngle = FOVY
 		
 		# Scene's arcball.
 		self.sceneArcBall = SceneArcBall(self)
@@ -456,9 +469,12 @@ class GlWidget(QGLWidget):
 		Resets the camera system.
 		"""
 		
-		self.position = numpy.array([0.0, 0.0, 3.0, 1])
-		self.upVector = numpy.array([0.0, 1.0, 0.0, 0])
-		self.pointer = numpy.array([0.0, 0.0, -1.0, 0])
+		self.position = POSITION
+		self.upVector = UPVECTOR
+		self.pointer = POINTER
+		self.leftVector = LEFT_VECTOR
+		
+		self.fovAngle = FOVY
 		
 		self.updateGL()
 		
@@ -684,8 +700,8 @@ class GlWidget(QGLWidget):
 			self.objTranslated = True
 			
 		if len(self.selectedObjects) == 0:
-			self.position -= shift[Y]*self.upVector
-			self.position += shift[X]*self.leftVector
+			self.position -= shift[Y]*self.upVector*2
+			self.position += shift[X]*self.leftVector*2
 		else:
 			for obj in self.selectedObjects:
 				screenPos = gluProject(*obj.centralPosition[:3])
