@@ -332,6 +332,21 @@ class GlWidget(QGLWidget):
 		elif (key == "B"):
 			self.backwardCamera()
 			
+		elif (key == "R"):
+			self.resetCamera()
+		
+		elif (ev.key() == Qt.Key_Up):
+			self.tiltUpCamera()
+		
+		elif (ev.key() == Qt.Key_Down):
+			self.tiltDownCamera()
+		
+		elif (ev.key() == Qt.Key_Left):
+			self.tiltLeftCamera()
+		
+		elif (ev.key() == Qt.Key_Right):
+			self.tiltRightCamera()
+			
 		elif (ev.key() == Qt.Key_Home):
 			self.homeKeyPressEvent()
 			
@@ -448,10 +463,37 @@ class GlWidget(QGLWidget):
 		
 		self.updateGL()
 		
+	def resetCamera(self):
+		"""
+		Reset the camera system.
+		"""
+		self.position = numpy.array([0.0, 0.0, 3.0, 1])
+		self.upVector = numpy.array([0.0, 1.0, 0.0, 0])
+		self.pointer = numpy.array([0.0, 0.0, -1.0, 0])
+		
+		self.updateGL()
+		
+	def tiltUpCamera(self):
+		
+		pass
+	
+	def tiltDownCamera(self):
+		
+		pass
+	
+	def tiltLeftCamera(self):
+		
+		pass
+	
+	def tiltRightCamera(self):
+		
+		pass
+	
 	def homeKeyPressEvent(self):
 		"""
 		Event called when HOME key is pressed.
 		"""
+		sameX = False
 		
 		if len(self.sceneObjects) > 0:
 			obj = self.sceneObjects[0]
@@ -482,6 +524,10 @@ class GlWidget(QGLWidget):
 			
 			side = max(sideX, sideY)
 			side = max(side, sideZ)
+			
+			if len(self.sceneObjects) == 1:
+				side = 1
+				
 			print side
 			
 			positionX = (minX+maxX)/2.0
