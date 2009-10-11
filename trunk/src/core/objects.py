@@ -81,7 +81,6 @@ class BaseObject(object):
 	def centralPosition(self, value):
 		self._centralPos = value
 		self.arcBall.setCentralPosition(self._centralPos)
-		print self._centralPos, "\n", self.arcBall.centralPos
 		
 	@property
 	def radius(self):
@@ -113,8 +112,9 @@ class Cube(BaseObject):
 		"""
 		
 		glColor3f(self.r, self.g, self.b)
-		glTranslate(self._centralPos[X], self._centralPos[Y], self._centralPos[Z])
+		glTranslate(*self._centralPos[:3])
 		glMultMatrixf(self.rotation)
+		
 		if self.wire:
 			glutWireCube(self.side)
 		else:
@@ -144,7 +144,7 @@ class Sphere(BaseObject):
 		"""
 		
 		glColor(self.r, self.g, self.b)
-		glTranslate(self._centralPos[X], self._centralPos[Y], self._centralPos[Z])
+		glTranslate(*self._centralPos[:3])
 		glMultMatrixf(self.rotation)
 		
 		if self.wire:

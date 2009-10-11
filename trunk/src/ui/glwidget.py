@@ -10,24 +10,14 @@ from core.objects import *
 from core.arcball import *
 from core.util import *
 from core.plane import *
+from core.camera import *
+from core.lighting import *
 
 class GlWidget(QGLWidget):
 	"""
-	Our implementation of QGLWidget widget. :) - Joaquim, el gato. Meow...
+	Our implementation of QGLWidget widget. :)
+	 - Joaquim, el gato. Meow...
 	"""
-	
-	# Camera and perspective constants.
-	global POSITION
-	global UPVECTOR
-	global POINTER
-	global LEFT_VECTOR
-	global FOVY
-	
-	POSITION = numpy.array([0.0, 0.0, 3.0, 1])
-	UPVECTOR = numpy.array([0.0, 1.0, 0.0, 0])
-	POINTER = numpy.array([0.0, 0.0, -1.0, 0])
-	LEFT_VECTOR = crossProduct(UPVECTOR, POINTER)
-	FOVY = 45
 	
 	def __init__ (self, parent=None):
 		"""
@@ -35,32 +25,21 @@ class GlWidget(QGLWidget):
 		"""
 		
 		super(GlWidget, self).__init__(parent)
-		
-		# Enables mouse move events even if no button is pressed.
-		self.setMouseTracking(True)
-		
+				
 		# Initialize window-related attributes.
 		self.wWidth, self.wHeight = 0, 0
+		
+		# Initialize the camera.
+		self.camera = Camera()
+		
+		# Initialize the lighting system.
+		self.lighting = Lighting()
 		
 		# Initialize widget attributes.
 		self.sceneObjects = []
 		self.selectedObjects = []
-		self.rotation = numpy.identity(4)
 		self.rotating = False
 		self.mousePos = numpy.zeros(3)
-		
-		# Camera's absolute position in world coordinates.
-		self.position = POSITION
-		# Camera's up vector. Should always be unitary.
-		self.upVector = UPVECTOR
-		# Vector that points to the direction that the camera is looking. Always unitary.
-		self.pointer = POINTER
-		# Unitary vector perpendicular to the upVecor and the pointer, pointing to the left of the camera. 
-		self.leftVector = LEFT_VECTOR
-		# Near/far clipping plane values.
-		self.near, self.far = 1, 500
-		# Perspective angle (in degrees).
-		self.fovAngle = FOVY
 		
 		# Scene's arcball.
 		self.sceneArcBall = SceneArcBall(self)
@@ -91,8 +70,11 @@ class GlWidget(QGLWidget):
 		glEnable(GL_DEPTH_TEST)
 		glEnable(GL_BLEND)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-		glEnable(GL_LIGHTING)
-		glEnable(GL_LIGHT0)
+		
+		# Lighting
+		self.lighting.enableLighting()
+		self.lighting.addLight(GL_LIGHT0)
+		
 		glEnable(GL_COLOR_MATERIAL)
 		glClearColor(0.6, 0.7, 0.9, 1)
 		
@@ -208,14 +190,14 @@ class GlWidget(QGLWidget):
 		self.z = self.mousePos[Y]
 		if self.applyZoom:
 			if self.z > self.z2:
-				if self.fovAngle > 1:
-					self.fovAngle -= 1
+				if self.camera.fovAngle > 1:
+					self.camera.fovAngle -= 1
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
 				self.updateGL()
 			else:
-				if self.fovAngle < 179:
-					self.fovAngle += 1
+				if self.camera.fovAngle < 179:
+					self.camera.fovAngle += 1
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
 				self.updateGL()
@@ -239,19 +221,7 @@ class GlWidget(QGLWidget):
 			
 			if len(self.selectedObjects) == 0:
 				r = self.sceneArcBall.setFinalPt(self.mousePos[X], self.mousePos[Y], True)
-				rotCenter = (self.position + self.pointer*10)[:3]
-				
-				glMatrixMode(GL_MODELVIEW)
-				glPushMatrix()
-				glLoadIdentity()
-				glTranslate(*rotCenter)
-				glMultMatrixd(r)
-				glTranslate(*(-rotCenter))
-				self.position = multiplyByMatrix(self.position)
-				self.upVector = multiplyByMatrix(self.upVector)
-				self.pointer = multiplyByMatrix(self.pointer)
-				self.leftVector = multiplyByMatrix(self.leftVector)
-				glPopMatrix()
+				self.camera.rotate(r)
 				
 			else:
 				for obj in self.selectedObjects:
@@ -329,37 +299,48 @@ class GlWidget(QGLWidget):
 			self.deleteSelectedObjects()
 			
 		elif (key == "W"):
-			self.upCamera()
+			self.camera.moveUp()
+			self.updateGL()
 			
 		elif (key == "S"):
-			self.downCamera()
+			self.camera.moveDown()
+			self.updateGL()
 			
 		elif (key == "A"):
-			self.leftCamera()
+			self.camera.moveLeft()
+			self.updateGL()
 			
 		elif (key == "D"):
-			self.rightCamera()
+			self.camera.moveRight()
+			self.updateGL()
 			
 		elif (key == "F"):
-			self.forwardCamera()
+			self.camera.moveForward()
+			self.updateGL()
 			
 		elif (key == "B"):
-			self.backwardCamera()
+			self.camera.moveBackward()
+			self.updateGL()
 			
 		elif (key == "R"):
-			self.resetCamera()
+			self.camera.reset()
+			self.updateGL()
 		
 		elif (ev.key() == Qt.Key_Up):
-			self.tiltUpCamera()
+			self.camera.tiltUp()
+			self.updateGL()
 		
 		elif (ev.key() == Qt.Key_Down):
-			self.tiltDownCamera()
+			self.camera.tiltDown()
+			self.updateGL()
 		
 		elif (ev.key() == Qt.Key_Left):
-			self.tiltLeftCamera()
+			self.camera.tiltLeft()
+			self.updateGL()
 		
 		elif (ev.key() == Qt.Key_Right):
-			self.tiltRightCamera()
+			self.camera.tiltRight()
+			self.updateGL()
 			
 		elif (ev.key() == Qt.Key_Home):
 			self.homeKeyPressEvent()
@@ -381,8 +362,8 @@ class GlWidget(QGLWidget):
 		"""
 		
 		newCube = Cube(0.5, self, False)
-		newCube.centralPosition = self.getMouseScenePosition()
-		newCube.rotation = self.rotation
+		newCube.centralPosition = self.camera.getScenePosition(self.mousePos[X], self.mousePos[Y])
+		newCube.rotation = self.camera.rotation
 		self.sceneObjects.append(newCube)
 		self.updateGL()
 		
@@ -392,8 +373,8 @@ class GlWidget(QGLWidget):
 		"""
 		
 		newSphere = Sphere(0.5, self, False)
-		newSphere.centralPosition = self.getMouseScenePosition()
-		newSphere.rotation = self.rotation
+		newSphere.centralPosition = self.camera.getScenePosition(self.mousePos[X], self.mousePos[Y])
+		newSphere.rotation = self.camera.rotation
 		self.sceneObjects.append(newSphere)
 		self.updateGL()
 		
@@ -406,115 +387,6 @@ class GlWidget(QGLWidget):
 			self.sceneObjects.remove(obj)
 		del self.selectedObjects[:]
 		self.updateGL()
-		
-	def upCamera(self):
-		"""
-		Moves the camera up.
-		"""
-		
-		self.position[X] += self.upVector[X]/10
-		self.position[Y] += self.upVector[Y]/10
-		self.position[Z] += self.upVector[Z]/10
-		
-		self.updateGL()
-	
-	def downCamera(self):
-		"""
-		Moves the camera down.
-		"""
-		
-		self.position[X] -= self.upVector[X]/10
-		self.position[Y] -= self.upVector[Y]/10
-		self.position[Z] -= self.upVector[Z]/10
-		
-		self.updateGL()
-	
-	def leftCamera(self):
-		"""
-		Moves the camera to the left.
-		"""
-		
-		self.position[X] += self.leftVector[X]/10
-		self.position[Y] += self.leftVector[Y]/10
-		self.position[Z] += self.leftVector[Z]/10
-		self.updateGL()
-	
-	def rightCamera(self):
-		"""
-		Moves the camera to the right.
-		"""
-		
-		self.position[X] -= self.leftVector[X]/10
-		self.position[Y] -= self.leftVector[Y]/10
-		self.position[Z] -= self.leftVector[Z]/10
-
-		
-		self.updateGL()
-	
-	def forwardCamera(self):
-		"""
-		Moves the camera forward.
-		"""
-		
-		self.position[X] += self.pointer[X]/10
-		self.position[Y] += self.pointer[Y]/10
-		self.position[Z] += self.pointer[Z]/10
-
-		
-		self.updateGL()
-	
-	def backwardCamera(self):
-		"""
-		Moves the camera backward.
-		"""
-		
-		self.position[X] -= self.pointer[X]/10
-		self.position[Y] -= self.pointer[Y]/10
-		self.position[Z] -= self.pointer[Z]/10
-
-		
-		self.updateGL()
-		
-	def resetCamera(self):
-		"""
-		Resets the camera system.
-		"""
-		
-		self.position = numpy.array([0.0, 0.0, 3.0, 1])
-		self.upVector = numpy.array([0.0, 1.0, 0.0, 0])
-		self.pointer = numpy.array([0.0, 0.0, -1.0, 0])
-		
-		self.leftVector = LEFT_VECTOR
-		
-		self.updateGL()
-		
-	def tiltUpCamera(self):
-		"""
-		Tilts the camera up.
-		"""
-		
-		pass
-	
-	def tiltDownCamera(self):
-		"""
-		Tilts the camera down.
-		"""
-		
-		pass
-	
-	def tiltLeftCamera(self):
-		"""
-		Tilts the camera left.
-		"""
-		
-		pass
-	
-	def tiltRightCamera(self):
-		"""
-		Tilts the camera right.
-		"""
-		
-		pass
 	
 	def homeKeyPressEvent(self):
 		"""
@@ -553,21 +425,21 @@ class GlWidget(QGLWidget):
 			
 			if len(self.sceneObjects) == 1:
 				side = 1
-				
-			print side
 			
 			positionX = (minX+maxX)/2.0
 			positionY = (minY+maxY)/2.0
 			positionZ = (minZ+maxZ)/2.0
 			
-			self.position[X] = positionX - self.pointer[X]*(side*sqrt(3))
-			self.position[Y] = positionY - self.pointer[Y]*(side*sqrt(3))
-			self.position[Z] = positionZ - self.pointer[Z]*(side*sqrt(3))
+			self.camera.position[X] = positionX - self.camera.pointer[X]*(side*sqrt(3))
+			self.camera.position[Y] = positionY - self.camera.pointer[Y]*(side*sqrt(3))
+			self.camera.position[Z] = positionZ - self.camera.pointer[Z]*(side*sqrt(3))
 				
 		else:
-			self.position[X] = 0 - self.pointer[X]*3
-			self.position[Y] = 0 - self.pointer[Y]*3
-			self.position[Z] = 0 - self.pointer[Z]*3
+			self.camera.position[X] = 0 - self.camera.pointer[X]*3
+			self.camera.position[Y] = 0 - self.camera.pointer[Y]*3
+			self.camera.position[Z] = 0 - self.camera.pointer[Z]*3
+			
+		self.camera.resetFovy()
 			
 		self.updateGL()
 		
@@ -579,53 +451,18 @@ class GlWidget(QGLWidget):
 		screenY = self.mapFromGlobal(QCursor.pos()).y()
 		self.mousePos[X] = self.mapFromGlobal(QCursor.pos()).x()
 		self.mousePos[Y] = glGetIntegerv(GL_VIEWPORT)[3] - screenY - 1
-		#self.mousePos[Z] = glReadPixels(self.mousePos[X], self.mousePos[Y],
-		#								1, 1, GL_DEPTH_COMPONENT, GL_FLOAT)
-			
-	def getMouseScenePosition(self):
-		"""
-		Gets the coordinates of the mouse in the scene.
-		"""
 		
-		self.updateMousePosition()
-
-		# Objects are created in mousePos[Z] = 0.5.
-		self.mousePos[Z] = 0.5
-		
-		coordPosition = gluUnProject(*self.mousePos)
-		
-		return arrayToVector(coordPosition, 1)
-	
-	def __setCameraView(self):
-		"""
-		Sets the camera to the current lookAt position and rotation angle.
-		Warning: This method sets the matrix mode to GL_MODELVIEW.
-		"""
-		
-		glMatrixMode(GL_MODELVIEW)
-		glLoadIdentity()
-		
-		gluLookAt(self.position[X], self.position[Y], self.position[Z],
-				  self.position[X] + self.pointer[X], self.position[Y] + self.pointer[Y],
-				  self.position[Z] + self.pointer[Z], self.upVector[X],
-				  self.upVector[Y], self.upVector[Z])
-		
-	def __setLighting(self):
+	def renderLighting(self):
 		"""
 		Sets the lighting of the scene.
 		"""
 		
-		light0_pos = [1.0, 1.0, 1.0, 0]
-		diffuse0 = [1.0, 1.0, 1.0, 1.0]
-		specular0 = [0, 0, 0, 1.0]
-		ambient0 = [0.2, 0.2, 0.2, 1.0]
-
-		glLightfv(GL_LIGHT0, GL_POSITION, light0_pos)
-		glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse0)
-		glLightfv(GL_LIGHT0, GL_SPECULAR, specular0)
-		glLightfv(GL_LIGHT0, GL_AMBIENT, ambient0)
+		self.lighting.setLight(GL_LIGHT0, [1.0, 1.0, 1.0, 0],
+							[1.0, 1.0, 1.0, 1.0],
+							[0, 0, 0, 1.0],
+							[0.2, 0.2, 0.2, 1.0])
 		
-	def __renderAxis(self):
+	def renderAxis(self):
 		"""
 		Creates a small white wire sphere and the XYZ axis in the 0 coordinate, just for reference.
 		"""
@@ -651,7 +488,7 @@ class GlWidget(QGLWidget):
 		glEnable(GL_LIGHTING)
 		glLineWidth(1)
 		
-	def __renderArcBall(self):
+	def renderArcBall(self):
 		"""
 		Creates a small wire sphere centered on the scene's rotation center
 		that approximatly bounds the visualization volume.
@@ -662,7 +499,7 @@ class GlWidget(QGLWidget):
 		else:
 			alpha = 0.2
 			
-		rotCenter = (self.position + self.pointer*10)[:3]
+		rotCenter = (self.camera.position + self.camera.pointer*10)[:3]
 		glColor4f(0.1, 0.3, 0.5, alpha)
 		glTranslate(*rotCenter)
 		glDisable(GL_LIGHTING)
@@ -676,18 +513,15 @@ class GlWidget(QGLWidget):
 		Warning: This method sets the matrix mode to GL_MODELVIEW.
 		"""
 		
-		glMatrixMode(GL_PROJECTION)
-		glLoadIdentity()
-		gluPerspective(self.fovAngle, float(self.wWidth)/self.wHeight, self.near, self.far)
-		
 		# Camera
-		self.__setCameraView()
+		self.camera.setLens(self.wWidth, self.wHeight)
+		self.camera.setView()
 		
 		# Lighting
-		self.__setLighting()
+		self.renderLighting()
 		
 		# Reference of the XYZ axis
-		self.__renderAxis()
+		self.renderAxis()
 		
 		for obj in self.sceneObjects:
 			glPushMatrix()
@@ -695,7 +529,7 @@ class GlWidget(QGLWidget):
 			glPopMatrix()
 			
 		# Reference to ArcBall
-		self.__renderArcBall()
+		self.renderArcBall()
 		
 	def handleTranslation(self):
 		"""
@@ -710,8 +544,8 @@ class GlWidget(QGLWidget):
 			self.objTranslated = True
 			
 		if len(self.selectedObjects) == 0:
-			self.position -= shift[Y]*self.upVector*2
-			self.position += shift[X]*self.leftVector*2
+			self.camera.position -= shift[Y]*self.camera.upVector*2
+			self.camera.position += shift[X]*self.camera.leftVector*2
 		else:
 			for obj in self.selectedObjects:
 				screenPos = gluProject(*obj.centralPosition[:3])
@@ -739,7 +573,7 @@ class GlWidget(QGLWidget):
 		gluPickMatrix(x, y, 2, 2, viewport)
 		glMultMatrixf(projection)
 		
-		self.__setCameraView()
+		self.camera.setView()
 		
 		glInitNames()
 		glPushName(0)

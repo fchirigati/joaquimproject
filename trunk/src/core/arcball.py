@@ -70,7 +70,7 @@ class ArcBall(object):
 		# Calculates the radius of the sphere projected on the screen.
 		viewport = glGetInteger(GL_VIEWPORT)
 		screenBorder = [None, None]
-		perpVector = numpy.array(self.parent.upVector) * self.radius
+		perpVector = numpy.array(self.parent.camera.upVector) * self.radius
 		
 		glMatrixMode(GL_MODELVIEW)
 		borderPoint = multiplyByMatrix(self.centralPos) + perpVector
