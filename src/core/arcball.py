@@ -65,19 +65,10 @@ class ArcBall(object):
 		sphereCoords[W] = 1
 		
 		# Gets the sphere's center position on the screen.
-		screenCenter = gluProject(self.centralPos[X], self.centralPos[Y], self.centralPos[Z])[:2]
+		screenCenter = gluProject(*self.centralPos[:3])[:2]
 		
 		# Calculates the radius of the sphere projected on the screen.
-		viewport = glGetInteger(GL_VIEWPORT)
-		screenBorder = [None, None]
-		perpVector = numpy.array(self.parent.camera.upVector) * self.radius
-		
-		glMatrixMode(GL_MODELVIEW)
-		borderPoint = multiplyByMatrix(self.centralPos) + perpVector
-		glMatrixMode(GL_PROJECTION)
-		projectionPoint = multiplyByMatrix(borderPoint)
-		screenBorder[X] = viewport[0] + viewport[2] * (projectionPoint[0]*0.5 + 0.5)
-		screenBorder[Y] = viewport[1] + viewport[3] * (projectionPoint[1]*0.5 + 0.5)
+		screenBorder = gluProject(*(self.centralPos + self.parent.camera.upVector * self.radius)[:3])[:2]
 		screenRadius = distance(screenCenter, screenBorder)
 		
 		# Finally, sets the sphere coordinates.

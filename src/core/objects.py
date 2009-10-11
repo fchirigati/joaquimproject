@@ -1,6 +1,5 @@
 from OpenGL.GL import *
 from OpenGL.raw.GLUT import *
-from arcball import *
 from util import *
 from math import sqrt
 
@@ -24,15 +23,11 @@ class BaseObject(object):
 		# Indicates whether the object is selected or not.
 		self.selected = False
 		
-		# TO-DO
-		self.rotating = False
-		
 		# Initial color of the object.
 		self.r, self.g, self.b = 1.0, 0.0, 0.0
 		
 		# Reference to the GLWidget object that contains this object.
 		self.parent = parent
-		self.arcBall = ArcBall(self.parent)
 			
 	def render(self):
 		"""
@@ -53,29 +48,6 @@ class BaseObject(object):
 			self.r, self.g, self.b = 0, 1, 0
 		else:
 			self.r, self.g, self.b = 1, 0, 0
-			
-	def rightClickEvent(self, x, y):
-		"""
-		TO-DO
-		"""
-		
-		self.rotating = True
-		self.arcBall.setInitialPt(x, y)
-	
-	def rightClickMoveEvent(self, x, y):
-		"""
-		TO-DO
-		"""
-		
-		r = self.arcBall.setFinalPt(x, y)
-		self.rotation = matrixByMatrix(r, self.rotation)
-		
-	def rightClickReleaseEvent(self, x, y):
-		"""
-		TO-DO
-		"""
-		
-		self.rotating = False
 		
 	@property
 	def centralPosition(self):
@@ -84,7 +56,6 @@ class BaseObject(object):
 	@centralPosition.setter
 	def centralPosition(self, value):
 		self._centralPos = value
-		self.arcBall.setCentralPosition(self._centralPos)
 		
 	@property
 	def radius(self):
@@ -93,7 +64,6 @@ class BaseObject(object):
 	@radius.setter
 	def radius(self, value):
 		self._radius = value
-		self.arcBall.radius = self._radius
 
 class Cube(BaseObject):
 	"""
@@ -123,10 +93,6 @@ class Cube(BaseObject):
 			glutWireCube(self.side)
 		else:
 			glutSolidCube(self.side)
-			
-		if self.rotating:
-			glColor(0.3, 0.6, 1)
-			glutWireSphere(self._radius + 0.005, 20, 20)
 		
 class Sphere(BaseObject):
 	"""
@@ -155,8 +121,4 @@ class Sphere(BaseObject):
 			glutWireSphere(self._radius, 20, 20)
 		else:
 			glutSolidSphere(self._radius, 20, 20)
-			
-		if self.rotating:
-			glColor(0.3, 0.6, 1)
-			glutWireSphere(self._radius + 0.005, 20, 20)
 		
