@@ -6,17 +6,19 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 import numpy
 
-from core.objects import *
 from core.arcball import *
-from core.util import *
-from core.plane import *
 from core.camera import *
+from core.group import *
 from core.lighting import *
+from core.objects import *
+from core.plane import *
+from core.util import *
 
 class GlWidget(QGLWidget):
 	"""
 	Implementation of the QGLWidget widget.
-	Joaquim, el gato.
+	Joaquim, el gato. Miau! :D
+	(Quem tinha tirado meu miado? - K.)
 	"""
 	
 	def __init__ (self, parent=None):
@@ -37,34 +39,33 @@ class GlWidget(QGLWidget):
 		
 		# Initialize widget attributes.
 		self.sceneObjects = []
-		self.selectedObjects = []
-		self.rotating = False
+		self.selectedObjects = Group(self)
 		self.mousePos = numpy.zeros(3)
 		
 		# Scene's arcball.
 		self.sceneArcBall = SceneArcBall(self)
 		
-		# Initial and final screen positions of the translation.
-		self.initPosition = numpy.zeros(2)
-		self.finalPosition = numpy.zeros(2)
+		# Last mouse position, updated at the end of the mouse events.
+		self.lastMousePos = numpy.zeros(2)
 		
 		# Object that cannot be deselected in mouse release event,
 		# once it was selected in mouse press event.
 		self.preSelectedObject = None
 		
 		# Indicates whether Ctrl is pressed or not.
-		self.ctrl = False
+		self.ctrlPressed = False
 		
-		# Indicates whether the tranlation mode is activated or not.
-		self.translating = False
+		# Indicates whether the mouse buttons are pressed or not.
+		self.leftClicked = False
+		self.middleClicked = False
+		self.rightClicked = False
 		
 		# Indicares whether there was a translation or not.
 		self.objTranslated = False
+		self.rotatingScene = False
 		
-		self.isClicked = False
 		self.z = 0.0
 		self.z2 = 0.0
-		self.applyZoom = 0
 		
 	def initializeGL(self):
 		"""
@@ -104,6 +105,8 @@ class GlWidget(QGLWidget):
 		Mouse movement callback.
 		"""
 		
+		self.updateMousePosition()
+		
 		# Translation
 		self.translationMoveEvent()
 		
@@ -112,6 +115,9 @@ class GlWidget(QGLWidget):
 		
 		# Rotation
 		self.rotationMoveEvent()
+		
+		self.lastMousePos[X] = self.mousePos[X]
+		self.lastMousePos[Y] = self.mousePos[Y]
 		
 	def mousePressEvent(self, ev):
 		"""
@@ -127,7 +133,8 @@ class GlWidget(QGLWidget):
 		elif (btn == Qt.MidButton):
 			self.midButtonEvent()
 			
-		print "Click (%i, %i)" % (self.mousePos[X], self.mousePos[Y])
+		self.lastMousePos[X] = self.mousePos[X]
+		self.lastMousePos[Y] = self.mousePos[Y]
 		
 	def mouseReleaseEvent(self, ev):
 		"""
@@ -144,6 +151,9 @@ class GlWidget(QGLWidget):
 		
 		# Translation
 		self.translationReleaseEvent()
+		
+		self.lastMousePos[X] = self.mousePos[X]
+		self.lastMousePos[Y] = self.mousePos[Y]
 
 	def enterEvent(self, ev):
 		"""
@@ -166,7 +176,7 @@ class GlWidget(QGLWidget):
 		Translation event called inside mouseMoveEvent().
 		"""
 		
-		if self.translating:
+		if self.leftClicked:
 			self.updateMousePosition()
 			self.handleTranslation()
 			self.updateGL()
@@ -176,14 +186,14 @@ class GlWidget(QGLWidget):
 		Translation event called inside mouseReleaseEvent().
 		"""
 		
-		if self.translating:
+		if self.leftClicked:
 			if not self.objTranslated:
-				# If there as a translation, do not apply a deselection event.
+				# If there was a translation, do not apply a deselection event.
 				self.releaseEventPicking()
 			else:
 				self.objTranslated = False
 		
-		self.translating = False
+		self.leftClicked = False
 		
 	def zoomMoveEvent(self):
 		"""
@@ -191,7 +201,7 @@ class GlWidget(QGLWidget):
 		"""
 		
 		self.z = self.mousePos[Y]
-		if self.applyZoom:
+		if self.middleClicked:
 			if self.z > self.z2:
 				self.camera.zoomIn()
 				self.z2 = self.mousePos[Y]
@@ -208,23 +218,21 @@ class GlWidget(QGLWidget):
 		Zoom event called inside mouseReleaseEvent().
 		"""
 		
-		self.applyZoom = False
+		self.middleClicked = False
 		
 	def rotationMoveEvent(self):
 		"""
 		Rotation event called inside mouseMoveEvent().
 		"""
 		
-		if self.isClicked:
+		if self.rightClicked:
 			self.updateMousePosition()
 			
-			if len(self.selectedObjects) == 0:
+			if self.rotatingScene:
 				r = self.sceneArcBall.setFinalPt(self.mousePos[X], self.mousePos[Y], True)
 				self.camera.rotate(r)
-				
 			else:
-				for obj in self.selectedObjects:
-					obj.rightClickMoveEvent(self.mousePos[X], self.mousePos[Y])
+				self.selectedObjects.rightClickMoveEvent(self.mousePos[X], self.mousePos[Y])
 			
 			self.updateGL()
 		
@@ -233,13 +241,12 @@ class GlWidget(QGLWidget):
 		Rotation event called inside mouseReleaseEvent().
 		"""
 		
-		if self.isClicked:
-			if len(self.selectedObjects) > 0:
-				for obj in self.selectedObjects:
-					obj.rightClickReleaseEvent(self.mousePos[X], self.mousePos[Y])
+		if self.rightClicked:
+			if self.rotatingScene:
+				self.rotatingScene = False
 			else:
-				self.rotating = False
-			self.isClicked = False
+				self.selectedObjects.rightClickReleaseEvent(self.mousePos[X], self.mousePos[Y])
+			self.rightClicked = False
 			self.updateGL()
 		
 	def leftButtonEvent(self):
@@ -247,44 +254,32 @@ class GlWidget(QGLWidget):
 		Event called when mouse's left button is pressed.
 		"""
 		
-		self.initPosition[X] = self.mousePos[X]
-		self.initPosition[Y] = self.mousePos[Y]
+		self.lastMousePos[X] = self.mousePos[X]
+		self.lastMousePos[Y] = self.mousePos[Y]
 		
-		# Picking
 		self.pressEventPicking()
-		
-		# Translation
-		self.translating = True
+		self.leftClicked = True
 		
 	def rightButtonEvent(self):
 		"""
 		Event called when mouse's right button is pressed.
 		"""
 		
-		# Picking
-		pickedObject = self.handlePicking()
-		if (pickedObject == None) or (pickedObject not in self.selectedObjects):
-			# If the mouse was pressed in the scene or in an unselected object
-			
-			for obj in self.selectedObjects:
-				obj.select(False)
-			del self.selectedObjects[:]
-		
-		# Rotation
-		self.isClicked = True
-		if len(self.selectedObjects) == 0:
-			self.sceneArcBall.setInitialPt(self.mousePos[X], self.mousePos[Y])
-			self.rotating = True
+		if self.mouseOverGroup():
+			self.selectedObjects.rightClickEvent(self.mousePos[X], self.mousePos[Y])
 		else:
-			for obj in self.selectedObjects:
-				obj.rightClickEvent(self.mousePos[X], self.mousePos[Y])
+			# The mouse was pressed outside the group selection sphere.
+			self.sceneArcBall.setInitialPt(self.mousePos[X], self.mousePos[Y])
+			self.rotatingScene = True
+			
+		self.rightClicked = True
 				
 	def midButtonEvent(self):
 		"""
 		Event called when mouse's middle button is pressed.
 		"""
 		
-		self.applyZoom = True
+		self.middleClicked = True
 		self.z = self.mousePos[Y]
 
 	def keyPressEvent(self, ev):
@@ -296,63 +291,53 @@ class GlWidget(QGLWidget):
 		key = str(ev.text()).upper()
 		
 		if (ev.modifiers() & Qt.ControlModifier):
-			self.ctrl = True
+			self.ctrlPressed = True
 			
 		if (key == "C"):
 			self.createCube()
-			
+			self.updateGL()
 		elif (key == "E"):
 			self.createSphere()
-			
+			self.updateGL()
 		elif (key == "X"):
 			self.deleteSelectedObjects()
-			
+			self.updateGL()
 		elif (key == "W"):
 			self.camera.moveUp()
 			self.updateGL()
-			
 		elif (key == "S"):
 			self.camera.moveDown()
 			self.updateGL()
-			
 		elif (key == "A"):
 			self.camera.moveLeft()
 			self.updateGL()
-			
 		elif (key == "D"):
 			self.camera.moveRight()
 			self.updateGL()
-			
 		elif (key == "F"):
 			self.camera.moveForward()
 			self.updateGL()
-			
 		elif (key == "B"):
 			self.camera.moveBackward()
 			self.updateGL()
-			
 		elif (key == "R"):
 			self.camera.reset()
 			self.updateGL()
-		
 		elif (ev.key() == Qt.Key_Up):
 			self.camera.tiltUp()
 			self.updateGL()
-		
 		elif (ev.key() == Qt.Key_Down):
 			self.camera.tiltDown()
 			self.updateGL()
-		
 		elif (ev.key() == Qt.Key_Left):
 			self.camera.tiltLeft()
 			self.updateGL()
-		
 		elif (ev.key() == Qt.Key_Right):
 			self.camera.tiltRight()
 			self.updateGL()
-			
 		elif (ev.key() == Qt.Key_Home):
 			self.homeKeyPressEvent()
+			self.updateGL()
 		
 	def keyReleaseEvent(self, ev):
 		"""
@@ -360,7 +345,7 @@ class GlWidget(QGLWidget):
 		"""
 		
 		if (ev.key() == Qt.Key_Control):
-			self.ctrl = False
+			self.ctrlPressed = False
 			
 	def createCube(self):
 		"""
@@ -371,7 +356,6 @@ class GlWidget(QGLWidget):
 		newCube.centralPosition = self.camera.getScenePosition(self.mousePos[X], self.mousePos[Y])
 		newCube.rotation = self.camera.rotation
 		self.sceneObjects.append(newCube)
-		self.updateGL()
 		
 	def createSphere(self):
 		"""
@@ -382,7 +366,6 @@ class GlWidget(QGLWidget):
 		newSphere.centralPosition = self.camera.getScenePosition(self.mousePos[X], self.mousePos[Y])
 		newSphere.rotation = self.camera.rotation
 		self.sceneObjects.append(newSphere)
-		self.updateGL()
 		
 	def deleteSelectedObjects(self):
 		"""
@@ -391,8 +374,7 @@ class GlWidget(QGLWidget):
 		
 		for obj in self.selectedObjects:
 			self.sceneObjects.remove(obj)
-		del self.selectedObjects[:]
-		self.updateGL()
+		self.selectedObjects.removeAll()
 	
 	def homeKeyPressEvent(self):
 		"""
@@ -446,8 +428,6 @@ class GlWidget(QGLWidget):
 			self.camera.position[Z] = 0 - self.camera.pointer[Z]*3
 			
 		self.camera.resetFovy()
-			
-		self.updateGL()
 		
 	def updateMousePosition(self):
 		"""
@@ -493,26 +473,7 @@ class GlWidget(QGLWidget):
 		glEnd()
 		glEnable(GL_LIGHTING)
 		glLineWidth(1)
-		
-	def renderArcBall(self):
-		"""
-		Creates a small wire sphere centered on the scene's rotation center
-		that approximatly bounds the visualization volume.
-		"""
-		
-		if self.rotating:
-			alpha = 0.6
-		else:
-			alpha = 0.2
 			
-		rotCenter = (self.camera.position + self.camera.pointer*10)[:3]
-		glColor4f(0.1, 0.3, 0.5, alpha)
-		glTranslate(*rotCenter)
-		glDisable(GL_LIGHTING)
-		glutWireSphere(10, 20, 20)
-		glEnable(GL_LIGHTING)
-		glTranslate(*-rotCenter)	
-		
 	def render(self):
 		"""
 		Renders the scene.
@@ -533,43 +494,35 @@ class GlWidget(QGLWidget):
 			glPushMatrix()
 			obj.render()
 			glPopMatrix()
-			
-		# Reference to ArcBall
-		self.renderArcBall()
+		
+		glPushMatrix()
+		self.selectedObjects.render()
+		glPopMatrix()
 		
 	def handleTranslation(self):
 		"""
 		Handles object translation when the user drags the object with the mouse's left button.
 		"""
 		
-		self.finalPosition[X] = self.mousePos[X]
-		self.finalPosition[Y] = self.mousePos[Y]
-		shift = (self.finalPosition - self.initPosition) / self.wHeight
-		
-		if (shift[X] != 0) or (shift[Y] != 0):
+		if (self.lastMousePos[X] != self.mousePos[X]) or (self.lastMousePos[Y] != self.mousePos[Y]):
 			self.objTranslated = True
 			
 		if len(self.selectedObjects) == 0:
-			self.camera.position -= shift[Y]*self.camera.upVector*2
-			self.camera.position += shift[X]*self.camera.leftVector*2
+			shift = self.camera.getScenePosition(*self.lastMousePos[:2]) \
+					- self.camera.getScenePosition(self.mousePos[X], self.mousePos[Y])
+			self.camera.position += shift
 		else:
-			for obj in self.selectedObjects:
-				screenPos = gluProject(*obj.centralPosition[:3])
-				newPos = gluUnProject(self.mousePos[X], self.mousePos[Y], screenPos[Z])
-				for i in range(3):
-					obj.centralPosition[i] = newPos[i]
-			
-		self.initPosition[X] = self.finalPosition[X]
-		self.initPosition[Y] = self.finalPosition[Y]
+			self.selectedObjects.leftClickMoveEvent(self.mousePos[X], self.mousePos[Y])
 		
-	def handlePicking(self):
+	def tryPick(self):
 		"""
-		Handles object picking.
+		Handles object picking, returning the object under the current mouse position.
+		Returns None if there is none.
 		"""
 		
 		buffer = glSelectBuffer(len(self.sceneObjects)*4)
-		projection = glGetDoublev(GL_PROJECTION_MATRIX)
-		viewport = glGetIntegerv(GL_VIEWPORT)
+		projection = glGetDouble(GL_PROJECTION_MATRIX)
+		viewport = glGetInteger(GL_VIEWPORT)
 		
 		glRenderMode(GL_SELECT)
 		
@@ -578,7 +531,6 @@ class GlWidget(QGLWidget):
 		glLoadIdentity()
 		gluPickMatrix(self.mousePos[X], self.mousePos[Y], 2, 2, viewport)
 		glMultMatrixf(projection)
-		
 		self.camera.setView()
 		
 		glInitNames()
@@ -594,7 +546,6 @@ class GlWidget(QGLWidget):
 		glPopMatrix()
 		glMatrixMode(GL_MODELVIEW)
 		glFlush()
-		
 		glPopName()
 			
 		hits = glRenderMode(GL_RENDER)
@@ -609,6 +560,46 @@ class GlWidget(QGLWidget):
 			return self.sceneObjects[nearestHit[1]]
 				
 		return nearestHit
+	
+	def mouseOverGroup(self):
+		"""
+		Tries to pick the selected group sphere.
+		Returns True if succeeded and False otherwise.
+		"""
+		
+		if len(self.selectedObjects) == 0:
+			return False
+		
+		buffer = glSelectBuffer(4)
+		projection = glGetDouble(GL_PROJECTION_MATRIX)
+		viewport = glGetInteger(GL_VIEWPORT)
+		
+		glRenderMode(GL_SELECT)
+		
+		glMatrixMode(GL_PROJECTION)
+		glPushMatrix()
+		glLoadIdentity()
+		gluPickMatrix(self.mousePos[X], self.mousePos[Y], 2, 2, viewport)
+		glMultMatrixf(projection)
+		self.camera.setView()
+		
+		glInitNames()
+		glPushName(0)
+		
+		glPushMatrix()
+		glLoadName(0)
+		self.selectedObjects.render(True)
+		glPopMatrix()
+				
+		glMatrixMode(GL_PROJECTION)
+		glPopMatrix()
+		glMatrixMode(GL_MODELVIEW)
+		glFlush()
+		glPopName()
+			
+		hits = glRenderMode(GL_RENDER)
+				
+		return len(hits) > 0
 			
 	def pressEventPicking(self):
 		"""
@@ -617,12 +608,12 @@ class GlWidget(QGLWidget):
 		and so, it does not consider the translation event.
 		"""
 		
-		pickedObject = self.handlePicking()
+		pickedObject = self.tryPick()
 		
 		if pickedObject != None:
 			# An object was picked.
 			
-			if not(self.ctrl):
+			if not(self.ctrlPressed):
 				# CTRL is not pressed.
 				
 				if pickedObject in self.selectedObjects:
@@ -634,13 +625,10 @@ class GlWidget(QGLWidget):
 					# The picked object was not previously selected.
 					
 					# Deselect all previously selected objects.
-					for obj in self.selectedObjects:
-						obj.select(False)
-					del self.selectedObjects[:]
+					self.selectedObjects.removeAll()
 					
 					# Select the picked object.
-					pickedObject.select(True)
-					self.selectedObjects.append(pickedObject)
+					self.selectedObjects.add(pickedObject)
 				
 					self.preSelectedObject = pickedObject
 			else:
@@ -649,21 +637,15 @@ class GlWidget(QGLWidget):
 				if pickedObject.selected:
 					pass
 				else:
-					pickedObject.select(True)
-					self.selectedObjects.append(pickedObject)
-					
+					self.selectedObjects.add(pickedObject)
 					self.preSelectedObject = pickedObject
-					
+			
+			self.selectedObjects.leftClickPressEvent(self.mousePos[X], self.mousePos[Y])		
 		else:
 			# No objects were picked.
-			
-			for obj in self.selectedObjects:
-				obj.select(False)
-			del self.selectedObjects[:]
+			self.selectedObjects.removeAll()
 			
 		self.updateGL()
-		
-		print "Press:", self.selectedObjects
 		
 	def releaseEventPicking(self):
 		"""
@@ -673,53 +655,37 @@ class GlWidget(QGLWidget):
 		in translationMoveEvent().
 		"""
 		
-		pickedObject = self.handlePicking()
+		pickedObject = self.tryPick()
 		
-		if self.preSelectedObject != pickedObject:
-			# The picked object was not selected in pressEventPicking().
+		if self.preSelectedObject != pickedObject and pickedObject != None:
+			# The picked object was not the one clicked in pressEventPicking() and an object was picked.
+				
+			if not(self.ctrlPressed):
+			# CTRL is not pressed.
 			
-			if pickedObject != None:
-				# An object was picked.
-				
-				if not(self.ctrl):
-				# CTRL is not pressed.
-				
-					if pickedObject in self.selectedObjects:
-						# The picked object is already selected.
+				if pickedObject in self.selectedObjects:
+					# The picked object is already selected.
+					
+					if len(self.selectedObjects) > 1:
+						# There were more than one object previously selected.
 						
-						if len(self.selectedObjects) > 1:
-							# There were more than one object previously selected.
-							
-							# Deselect all previously selected objects.
-							for obj in self.selectedObjects:
-								obj.select(False)
-							del self.selectedObjects[:]
-							
-							# Select the picked object.
-							pickedObject.select(True)
-							self.selectedObjects.append(pickedObject)
-							
-						else:
-							# The picked object is the previously selected object.
-							
-							pickedObject.select(False)
-							self.selectedObjects.remove(pickedObject)
-				
+						# Deselect all previously selected objects.
+						self.selectedObjects.removeAll()
+						
+						# Select the picked object.
+						self.selectedObjects.add(pickedObject)
+						
 					else:
-						# The picked object was not previously selected.
-						# pressEventPicking()
-						pass
-						
-				else:
-				# CTRL is pressed.
-				
-					if pickedObject.selected:
-						pickedObject.select(False)
+						# The picked object is the previously selected object.
 						self.selectedObjects.remove(pickedObject)
+					
+			else:
+			# CTRL is pressed.
+				if pickedObject.selected:
+					self.selectedObjects.remove(pickedObject)
 				
-		else:
+		elif self.preSelectedObject == pickedObject:
 			self.preSelectedObject = None
 			
 		self.updateGL()
 		
-		print "Release:", self.selectedObjects

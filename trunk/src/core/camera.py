@@ -11,7 +11,7 @@ class Camera(object):
 	"""
 	
 	# Camera and perspective constants.
-	POSITION = [0.0, 0.0, 3.0, 1]
+	POSITION = [0.0, 0.0, 10.0, 1]
 	UPVECTOR = [0.0, 1.0, 0.0, 0]
 	POINTER = [0.0, 0.0, -1.0, 0]
 	LEFT_VECTOR = [-1.0, 0.0, 0.0, 0]
@@ -72,14 +72,14 @@ class Camera(object):
 		glLoadIdentity()
 		gluPerspective(self.fovAngle, self.aspect, self.near, self.far)
 		
-	def getScenePosition(self, x, y):
+	def getScenePosition(self, x, y, depth=0.5):
 		"""
-		Gets the coordinates of the mouse in the scene, on the plane
-		that is on the middle of the far and near planes.
+		Gets the coordinates of the mouse in the scene, on a plane
+		that is between the far and near planes, according to the depth value.
 		"""
 
 		realFar = self.far
-		self.far = (self.far - self.near) / 2
+		self.far = (self.far - self.near) * depth
 		self.setLens()
 		coordPosition = gluUnProject(x, y, 1)
 		self.far = realFar

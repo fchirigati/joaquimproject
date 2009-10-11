@@ -95,14 +95,14 @@ def angle(a, b):
 	
 	return degrees(acos(numpy.dot(a, b) / (lengthVector(a) * lengthVector(b))))
 
-def lengthVector(a):
+def lengthVector(vector):
 	"""
 	Returns the length of a given vector.
 	"""
 	
 	sum = 0
-	for i in range(len(a)):
-		sum += a[i]*a[i]
+	for i in range(len(vector)):
+		sum += vector[i]*vector[i]
 		
 	return sqrt(sum)
 
