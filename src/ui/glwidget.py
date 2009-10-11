@@ -15,8 +15,8 @@ from core.lighting import *
 
 class GlWidget(QGLWidget):
 	"""
-	Our implementation of QGLWidget widget. :)
-	 - Joaquim, el gato. Meow...
+	Implementation of the QGLWidget widget.
+	Joaquim, el gato.
 	"""
 	
 	def __init__ (self, parent=None):
@@ -48,13 +48,17 @@ class GlWidget(QGLWidget):
 		self.initPosition = numpy.zeros(2)
 		self.finalPosition = numpy.zeros(2)
 		
+		# Object that cannot be deselected in mouse release event,
+		# once it was selected in mouse press event.
+		self.preSelectedObject = None
+		
 		# Indicates whether Ctrl is pressed or not.
 		self.ctrl = False
 		
 		# Indicates whether the tranlation mode is activated or not.
 		self.translating = False
 		
-		# Indicates whether there was a translation or not.
+		# Indicares whether there was a translation or not.
 		self.objTranslated = False
 		
 		self.isClicked = False
@@ -166,20 +170,19 @@ class GlWidget(QGLWidget):
 			self.updateMousePosition()
 			self.handleTranslation()
 			self.updateGL()
-		else:
-			pass
 		
 	def translationReleaseEvent(self):
 		"""
 		Translation event called inside mouseReleaseEvent().
 		"""
 		
-		if not(self.objTranslated) and self.translating:
-			# If the objects or the scene were not translated, apply picking method
-			self.handlePicking(self.mousePos[X], self.mousePos[Y])
-		else:
-			self.objTranslated = False
-			
+		if self.translating:
+			if not self.objTranslated:
+				# If there as a translation, do not apply a deselection event.
+				self.releaseEventPicking()
+			else:
+				self.objTranslated = False
+		
 		self.translating = False
 		
 	def zoomMoveEvent(self):
@@ -201,8 +204,6 @@ class GlWidget(QGLWidget):
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
 				self.updateGL()
-		else:
-			pass
 		
 	def zoomReleaseEvent(self):
 		"""
@@ -229,9 +230,6 @@ class GlWidget(QGLWidget):
 			
 			self.updateGL()
 		
-		else:
-			pass
-		
 	def rotationReleaseEvent(self):
 		"""
 		Rotation event called inside mouseReleaseEvent().
@@ -245,8 +243,6 @@ class GlWidget(QGLWidget):
 				self.rotating = False
 			self.isClicked = False
 			self.updateGL()
-		else:
-			pass
 		
 	def leftButtonEvent(self):
 		"""
@@ -255,6 +251,11 @@ class GlWidget(QGLWidget):
 		
 		self.initPosition[X] = self.mousePos[X]
 		self.initPosition[Y] = self.mousePos[Y]
+		
+		# Picking
+		self.pressEventPicking()
+		
+		# Translation
 		self.translating = True
 		
 	def rightButtonEvent(self):
@@ -262,6 +263,15 @@ class GlWidget(QGLWidget):
 		Event called when mouse's right button is pressed.
 		"""
 		
+		# Picking
+		pickedObject = self.handlePicking()
+		if (pickedObject == None) or (pickedObject not in self.selectedObjects):
+			# If the mouse was pressed in the scene or in an unselected object
+			for obj in self.selectedObjects:
+				obj.select(False)
+			del self.selectedObjects[:]
+		
+		# Rotation
 		self.isClicked = True
 		if len(self.selectedObjects) == 0:
 			self.sceneArcBall.setInitialPt(self.mousePos[X], self.mousePos[Y])
@@ -344,9 +354,6 @@ class GlWidget(QGLWidget):
 			
 		elif (ev.key() == Qt.Key_Home):
 			self.homeKeyPressEvent()
-			
-		else:
-			pass
 		
 	def keyReleaseEvent(self, ev):
 		"""
@@ -555,10 +562,10 @@ class GlWidget(QGLWidget):
 			
 		self.initPosition[X] = self.finalPosition[X]
 		self.initPosition[Y] = self.finalPosition[Y]
-			
-	def handlePicking(self, x, y):
+		
+	def handlePicking(self):
 		"""
-		Handles object picking when the user clicks with the mouse's left button.
+		Handles object picking.
 		"""
 		
 		buffer = glSelectBuffer(len(self.sceneObjects)*4)
@@ -570,7 +577,7 @@ class GlWidget(QGLWidget):
 		glMatrixMode(GL_PROJECTION)
 		glPushMatrix()
 		glLoadIdentity()
-		gluPickMatrix(x, y, 2, 2, viewport)
+		gluPickMatrix(self.mousePos[X], self.mousePos[Y], 2, 2, viewport)
 		glMultMatrixf(projection)
 		
 		self.camera.setView()
@@ -598,19 +605,35 @@ class GlWidget(QGLWidget):
 			near, far, names = hit
 			if (nearestHit == None) or (near < nearestHit[0]):
 				nearestHit = [near, names[0]]
-		
+				
 		if nearestHit != None:
+			return self.sceneObjects[nearestHit[1]]
+				
+		return nearestHit
+			
+	def pressEventPicking(self):
+		"""
+		Picking event called when mousePressEvent() is called.
+		Note that this event will be called before translationMoveEvent(),
+		and so, it does not consider the translation event.
+		"""
+		
+		pickedObject = self.handlePicking()
+		
+		if pickedObject != None:
 			# An object was picked.
-			pickedObject = self.sceneObjects[nearestHit[1]]
 			
 			if not(self.ctrl):
 				# CTRL is not pressed.
-				if len(self.selectedObjects) == 1 \
-				and self.selectedObjects[0] == pickedObject:
-					# The only object that was previously selected is the one picked.
-					pickedObject.select(False)
-					del self.selectedObjects[:]
+				
+				if pickedObject in self.selectedObjects:
+					# The picked object is already selected.
+					# releaseEventPicking
+					pass
+				
 				else:
+					# The picked object was not previously selected.
+					
 					# Deselect all previously selected objects.
 					for obj in self.selectedObjects:
 						obj.select(False)
@@ -619,18 +642,85 @@ class GlWidget(QGLWidget):
 					# Select the picked object.
 					pickedObject.select(True)
 					self.selectedObjects.append(pickedObject)
+				
+					self.preSelectedObject = pickedObject
 			else:
 				# CTRL is pressed.
+				
 				if pickedObject.selected:
-					pickedObject.select(False)
-					self.selectedObjects.remove(pickedObject)
+					pass
 				else:
 					pickedObject.select(True)
 					self.selectedObjects.append(pickedObject)
-		elif not(self.ctrl):
-			# No objects were picked and CTRL is not pressed.
+					
+					self.preSelectedObject = pickedObject
+					
+		else:
+			# No objects were picked.
+			
 			for obj in self.selectedObjects:
 				obj.select(False)
 			del self.selectedObjects[:]
 			
 		self.updateGL()
+		
+		print "Press:", self.selectedObjects
+		
+	def releaseEventPicking(self):
+		"""
+		Picking event called when mouseReleaseEvent() is called.
+		Note that this event will be called in translationReleaseEvent(),
+		and so, it will not be called if there was a previous translation
+		in translationMoveEvent().
+		"""
+		
+		pickedObject = self.handlePicking()
+		
+		if self.preSelectedObject != pickedObject:
+			# The picked object was not selected in pressEventPicking().
+			
+			if pickedObject != None:
+				# An object was picked.
+				
+				if not(self.ctrl):
+				# CTRL is not pressed.
+				
+					if pickedObject in self.selectedObjects:
+						# The picked object is already selected.
+						
+						if len(self.selectedObjects) > 1:
+							# There were more than one object previously selected.
+							
+							# Deselect all previously selected objects.
+							for obj in self.selectedObjects:
+								obj.select(False)
+							del self.selectedObjects[:]
+							
+							# Select the picked object.
+							pickedObject.select(True)
+							self.selectedObjects.append(pickedObject)
+							
+						else:
+							# The picked object is the previously selected object.
+							
+							pickedObject.select(False)
+							self.selectedObjects.remove(pickedObject)
+				
+					else:
+						# The picked object was not previously selected.
+						# pressEventPicking()
+						pass
+						
+				else:
+				# CTRL is pressed.
+				
+					if pickedObject.selected:
+						pickedObject.select(False)
+						self.selectedObjects.remove(pickedObject)
+				
+		else:
+			self.preSelectedObject = None
+			
+		self.updateGL()
+		
+		print "Release:", self.selectedObjects

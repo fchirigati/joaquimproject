@@ -20,7 +20,11 @@ class BaseObject(object):
 		
 		# Radius of the bouding sphere that surrounds the object. 
 		self._radius = 0.0
+		
+		# Indicates whether the object is selected or not.
 		self.selected = False
+		
+		# TO-DO
 		self.rotating = False
 		
 		# Initial color of the object.
