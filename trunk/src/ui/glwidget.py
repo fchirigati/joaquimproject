@@ -193,14 +193,12 @@ class GlWidget(QGLWidget):
 		self.z = self.mousePos[Y]
 		if self.applyZoom:
 			if self.z > self.z2:
-				if self.camera.fovAngle > 1:
-					self.camera.fovAngle -= 1
+				self.camera.zoomIn()
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
 				self.updateGL()
 			else:
-				if self.camera.fovAngle < 179:
-					self.camera.fovAngle += 1
+				self.camera.zoomOut()
 				self.z2 = self.mousePos[Y]
 				self.updateMousePosition()
 				self.updateGL()
@@ -267,6 +265,7 @@ class GlWidget(QGLWidget):
 		pickedObject = self.handlePicking()
 		if (pickedObject == None) or (pickedObject not in self.selectedObjects):
 			# If the mouse was pressed in the scene or in an unselected object
+			
 			for obj in self.selectedObjects:
 				obj.select(False)
 			del self.selectedObjects[:]
