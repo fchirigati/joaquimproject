@@ -74,7 +74,8 @@ class Camera(object):
 		
 	def getScenePosition(self, x, y):
 		"""
-		Gets the coordinates of the mouse in the scene, on the plane that is on the middle of the far and near planes.
+		Gets the coordinates of the mouse in the scene, on the plane
+		that is on the middle of the far and near planes.
 		"""
 
 		realFar = self.far
@@ -124,6 +125,36 @@ class Camera(object):
 		self.rotation = matrixByMatrix(rotation, self.rotation)
 		glPopMatrix()
 		
+	def spin(self, rotation):
+		"""
+		Spins the camera around its position, given a rotation matrix.
+		"""
+		
+		glPushMatrix()
+		glLoadIdentity()
+		glMultMatrixd(rotation)
+		self.upVector = multiplyByMatrix(self.upVector)
+		self.pointer = multiplyByMatrix(self.pointer)
+		self.leftVector = multiplyByMatrix(self.leftVector)
+		self.rotation = matrixByMatrix(rotation, self.rotation)
+		glPopMatrix()
+		
+	def zoomIn(self):
+		"""
+		Zooms the camera in.
+		"""
+		
+		if self.fovAngle > 1:
+			self.fovAngle -= 1
+			
+	def zoomOut(self):
+		"""
+		Zooms the camera out.
+		"""
+		
+		if self.fovAngle < 179:
+			self.fovAngle += 1
+		
 	def moveUp(self):
 		"""
 		Moves the camera up.
@@ -169,27 +200,63 @@ class Camera(object):
 	def tiltUp(self):
 		"""
 		Tilts the camera up.
+		Warning: This method sets the matrix mode to GL_MODELVIEW.
 		"""
 		
-		pass
+		glMatrixMode(GL_MODELVIEW)
+		
+		glPushMatrix()
+		glLoadIdentity()
+		glRotate(-2, self.leftVector[X], self.leftVector[Y], self.leftVector[Z])
+		rotation = glGetDouble(GL_MODELVIEW_MATRIX)
+		glPopMatrix()
+		
+		self.spin(rotation)
 	
 	def tiltDown(self):
 		"""
 		Tilts the camera down.
+		Warning: This method sets the matrix mode to GL_MODELVIEW.
 		"""
 		
-		pass
+		glMatrixMode(GL_MODELVIEW)
+		
+		glPushMatrix()
+		glLoadIdentity()
+		glRotate(2, self.leftVector[X], self.leftVector[Y], self.leftVector[Z])
+		rotation = glGetDouble(GL_MODELVIEW_MATRIX)
+		glPopMatrix()
+		
+		self.spin(rotation)
 	
 	def tiltLeft(self):
 		"""
 		Tilts the camera left.
+		Warning: This method sets the matrix mode to GL_MODELVIEW.
 		"""
 		
-		pass
+		glMatrixMode(GL_MODELVIEW)
+		
+		glPushMatrix()
+		glLoadIdentity()
+		glRotate(2, self.upVector[X], self.upVector[Y], self.upVector[Z])
+		rotation = glGetDouble(GL_MODELVIEW_MATRIX)
+		glPopMatrix()
+		
+		self.spin(rotation)
 	
 	def tiltRight(self):
 		"""
 		Tilts the camera right.
+		Warning: This method sets the matrix mode to GL_MODELVIEW.
 		"""
 		
-		pass
+		glMatrixMode(GL_MODELVIEW)
+		
+		glPushMatrix()
+		glLoadIdentity()
+		glRotate(-2, self.upVector[X], self.upVector[Y], self.upVector[Z])
+		rotation = glGetDouble(GL_MODELVIEW_MATRIX)
+		glPopMatrix()
+		
+		self.spin(rotation)
