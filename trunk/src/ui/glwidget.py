@@ -323,6 +323,9 @@ class GlWidget(QGLWidget):
 		elif (key == "R"):
 			self.camera.reset()
 			self.updateGL()
+		elif (key == "T"):
+			self.selectAll()
+			self.updateGL()
 		elif (ev.key() == Qt.Key_Up):
 			self.camera.tiltUp()
 			self.updateGL()
@@ -367,6 +370,15 @@ class GlWidget(QGLWidget):
 		newSphere.rotation = self.camera.rotation
 		self.sceneObjects.append(newSphere)
 		
+	def selectAll(self):
+		"""
+		Selects all objects.
+		"""
+		for obj in self.sceneObjects:
+			if obj not in self.selectedObjects:
+				obj.select(True)
+				self.selectedObjects.add(obj)
+	
 	def deleteSelectedObjects(self):
 		"""
 		Deletes all selected objects.
@@ -375,6 +387,7 @@ class GlWidget(QGLWidget):
 		for obj in self.selectedObjects:
 			self.sceneObjects.remove(obj)
 		self.selectedObjects.removeAll()
+		
 	
 	def homeKeyPressEvent(self):
 		"""
