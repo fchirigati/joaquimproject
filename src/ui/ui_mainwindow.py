@@ -1,6 +1,8 @@
 from PyQt4 import Qt, QtCore, QtGui
 
 from glwidget import GlWidget
+from about_dialog import *
+from help_dialog import *
 import images_rc
 
 class Ui_MainWindow(object):
@@ -176,6 +178,9 @@ class Ui_MainWindow(object):
 		QtCore.QObject.connect(self.sizeSlider, Qt.SIGNAL("valueChanged(int)"), self.sizeSliderChanged)
 		QtCore.QObject.connect(self.sizeSlider, Qt.SIGNAL("sliderReleased()"), self.sizeSliderReleased)
 		
+		QtCore.QObject.connect(self.actionAbout, Qt.SIGNAL("triggered()"), self.showAboutMessage)
+		QtCore.QObject.connect(self.actionHelp, Qt.SIGNAL("triggered()"), self.showHelpMessage)
+		
 	def zoomSliderChanged(self):
 		"""
 		Called when the zoom slider's value is changed.
@@ -236,6 +241,22 @@ class Ui_MainWindow(object):
 		
 		if value != 0:
 			self.sizeSlider.setValue(value)
+			
+	def showAboutMessage(self):
+		"""
+		Shows the about dialog.
+		"""
+		
+		aboutMessage = AboutDialog()
+		aboutMessage.exec_()
+		
+	def showHelpMessage(self):
+		"""
+		Shows the help dialog.
+		"""
+		
+		aboutMessage = HelpDialog()
+		aboutMessage.exec_()
 
 	def retranslateUi(self, MainWindow):
 		"""
