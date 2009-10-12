@@ -21,12 +21,15 @@ class GlWidget(QGLWidget):
 	(Quem tinha tirado meu miado? - K.)
 	"""
 	
-	def __init__ (self, parent=None):
+	def __init__ (self, mainWindow, parent=None):
 		"""
 		Widget constructor.
 		"""
 		
 		super(GlWidget, self).__init__(parent)
+				
+		# MainWindow
+		self.mainWindow = mainWindow
 				
 		# Initialize window-related attributes.
 		self.wWidth, self.wHeight = 0, 0
@@ -203,15 +206,30 @@ class GlWidget(QGLWidget):
 		self.z = self.mousePos[Y]
 		if self.middleClicked:
 			if self.z > self.z2:
-				self.camera.zoomIn()
-				self.z2 = self.mousePos[Y]
-				self.updateMousePosition()
-				self.updateGL()
+				self.zoomIn()
 			else:
-				self.camera.zoomOut()
-				self.z2 = self.mousePos[Y]
-				self.updateMousePosition()
-				self.updateGL()
+				self.zoomOut()
+			self.mainWindow.setZoomSliderValue(int(358 - self.camera.fovAngle*2))
+				
+	def zoomIn(self):
+		"""
+		Zooms the camera in.
+		"""
+		
+		self.camera.zoomIn()
+		self.z2 = self.mousePos[Y]
+		self.updateMousePosition()
+		self.updateGL()
+		
+	def zoomOut(self):
+		"""
+		Zooms the camera out.
+		"""
+		
+		self.camera.zoomOut()
+		self.z2 = self.mousePos[Y]
+		self.updateMousePosition()
+		self.updateGL()
 		
 	def zoomReleaseEvent(self):
 		"""
@@ -321,8 +339,7 @@ class GlWidget(QGLWidget):
 			self.camera.moveBackward()
 			self.updateGL()
 		elif (key == "R"):
-			self.camera.reset()
-			self.updateGL()
+			self.resetView()
 		elif (key == "T"):
 			self.selectAll()
 			self.updateGL()
@@ -340,7 +357,6 @@ class GlWidget(QGLWidget):
 			self.updateGL()
 		elif (ev.key() == Qt.Key_Home):
 			self.homeKeyPressEvent()
-			self.updateGL()
 		
 	def keyReleaseEvent(self, ev):
 		"""
@@ -355,7 +371,7 @@ class GlWidget(QGLWidget):
 		Creates a new cube.
 		"""
 		
-		newCube = Cube(0.5, self, False)
+		newCube = Cube(self, self.mainWindow.getSizeSliderValue())
 		newCube.centralPosition = self.camera.getScenePosition(self.mousePos[X], self.mousePos[Y])
 		newCube.rotation = self.camera.rotation
 		self.sceneObjects.append(newCube)
@@ -365,7 +381,7 @@ class GlWidget(QGLWidget):
 		Creates a new sphere.
 		"""
 		
-		newSphere = Sphere(0.5, self, False)
+		newSphere = Sphere(self, self.mainWindow.getSizeSliderValue())
 		newSphere.centralPosition = self.camera.getScenePosition(self.mousePos[X], self.mousePos[Y])
 		newSphere.rotation = self.camera.rotation
 		self.sceneObjects.append(newSphere)
@@ -374,6 +390,7 @@ class GlWidget(QGLWidget):
 		"""
 		Selects all objects.
 		"""
+		
 		for obj in self.sceneObjects:
 			if obj not in self.selectedObjects:
 				obj.select(True)
@@ -388,6 +405,14 @@ class GlWidget(QGLWidget):
 			self.sceneObjects.remove(obj)
 		self.selectedObjects.removeAll()
 		
+	def resetView(self):
+		"""
+		Resets the view.
+		"""
+		
+		self.camera.reset()
+		self.mainWindow.setZoomSliderValue(int(358 - self.camera.fovAngle*2))
+		self.updateGL()
 	
 	def homeKeyPressEvent(self):
 		"""
@@ -441,6 +466,20 @@ class GlWidget(QGLWidget):
 			self.camera.position[Z] = 0 - self.camera.pointer[Z]*3
 			
 		self.camera.resetFovy()
+		self.mainWindow.setZoomSliderValue(int(358 - self.camera.fovAngle*2))
+		
+		self.updateGL()
+		
+	def changeSelectedObjectsSize(self, value):
+		"""
+		Changes the size of the selected objects to value.
+		"""
+		
+		for obj in self.selectedObjects:
+			obj.size = value
+			obj.render()
+			
+		self.updateGL()
 		
 	def updateMousePosition(self):
 		"""
@@ -659,6 +698,7 @@ class GlWidget(QGLWidget):
 			self.selectedObjects.removeAll()
 			
 		self.updateGL()
+		self.mainWindow.setSizeSliderValue(self.selectedObjects.maxObjectSize * 10)
 		
 	def releaseEventPicking(self):
 		"""
@@ -699,6 +739,6 @@ class GlWidget(QGLWidget):
 				
 		elif self.preSelectedObject == pickedObject:
 			self.preSelectedObject = None
-			
+
 		self.updateGL()
-		
+		self.mainWindow.setSizeSliderValue(self.selectedObjects.maxObjectSize * 10)

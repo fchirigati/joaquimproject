@@ -39,6 +39,9 @@ class Group(object):
 		# Vector from the object's screen center to the point where it was clicked.
 		self.fromCenter = numpy.zeros(2)
 		
+		# Maximum object size of all objects in this group.
+		self.maxObjectSize = 0 
+		
 	def __iter__(self):
 		"""
 		Object that will have the iteration items.
@@ -159,6 +162,9 @@ class Group(object):
 				newPts = [obj, object]
 				self._maxDistance = dist
 				
+		if object.size > self.maxObjectSize:
+			self.maxObjectSize = object.size
+				
 		self._objects.append(object)
 		object.select(True)
 		
@@ -200,6 +206,12 @@ class Group(object):
 		self._maxDistance = 0
 		object.select(False)
 		
+		if self.maxObjectSize == object.size:
+			self.maxObjectSize = 0
+			for obj in self._objects:
+				if obj.size > self.maxObjectSize:
+					self.maxObjectSize = obj.size	
+		
 		if len(self._objects) == 0:
 			return
 		elif len(self._objects) == 1:
@@ -240,6 +252,7 @@ class Group(object):
 		del self._objects[:]
 		self._radius = 0
 		self._maxDistance = 0
+		self.maxObjectSize = 0
 		
 	def render(self, pickingMode=False):
 		"""
