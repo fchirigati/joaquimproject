@@ -9,7 +9,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 	def __init__(self, parent=None):
 		"""
-		Constructor
+		Constructor.
 		"""
 		
 		super(MainWindow, self).__init__(parent)
