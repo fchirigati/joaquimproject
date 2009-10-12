@@ -145,7 +145,7 @@ class Camera(object):
 		"""
 		
 		if self.fovAngle > 1:
-			self.fovAngle -= 1
+			self.fovAngle -= 0.5
 			
 	def zoomOut(self):
 		"""
@@ -153,7 +153,7 @@ class Camera(object):
 		"""
 		
 		if self.fovAngle < 179:
-			self.fovAngle += 1
+			self.fovAngle += 0.5
 		
 	def moveUp(self):
 		"""

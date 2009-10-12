@@ -64,19 +64,27 @@ class BaseObject(object):
 	@radius.setter
 	def radius(self, value):
 		self._radius = value
+		
+	@property
+	def size(self):
+		raise Exception()
+	
+	@size.setter
+	def size(self, value):
+		raise Exception()
 
 class Cube(BaseObject):
 	"""
 	Class that defines a cube.
 	"""
 	
-	def __init__(self, side, parent, wire=True):
+	def __init__(self, parent, side=0.5, wire=False):
 		"""
 		Constructor.
 		"""
 		
 		super(Cube, self).__init__(parent)
-		self.side = side
+		self._side = side
 		self.wire = wire
 		self.radius = side * sqrt(3) / 2.0
 		
@@ -90,16 +98,25 @@ class Cube(BaseObject):
 		glMultMatrixf(self.rotation)
 		
 		if self.wire:
-			glutWireCube(self.side)
+			glutWireCube(self._side)
 		else:
-			glutSolidCube(self.side)
+			glutSolidCube(self._side)
+		
+	@property	
+	def size(self):
+		return self._side
+		
+	@size.setter
+	def size(self, value):
+		self._side = value
+		self.radius = value * sqrt(3) / 2.0
 		
 class Sphere(BaseObject):
 	"""
 	Class that defines a sphere.
 	"""
 	
-	def __init__(self, radius, parent, wire=True):
+	def __init__(self, parent, radius=0.5, wire=False):
 		"""
 		Constructor.
 		"""
@@ -107,6 +124,14 @@ class Sphere(BaseObject):
 		super(Sphere, self).__init__(parent)
 		self.wire = wire
 		self.radius = radius
+		
+	@property	
+	def size(self):
+		return self.radius
+		
+	@size.setter
+	def size(self, value):
+		self.radius = value
 		
 	def render(self):
 		"""
