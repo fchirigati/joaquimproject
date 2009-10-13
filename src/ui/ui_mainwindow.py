@@ -18,6 +18,9 @@ class Ui_MainWindow(object):
 		
 		MainWindow.setObjectName("MainWindow")
 		MainWindow.resize(641, 474)
+		icon = QtGui.QIcon()
+		icon.addPixmap(QtGui.QPixmap(":/Cat.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+		MainWindow.setWindowIcon(icon)
 		
 		self.centralwidget = QtGui.QWidget(MainWindow)
 		self.centralwidget.setObjectName("centralwidget")
@@ -126,6 +129,9 @@ class Ui_MainWindow(object):
 		self.sliderPosition = 358 - (self.widget.camera.FOVY*2)
 		self.zoomSlider.setSliderPosition(self.sliderPosition)
 		
+		# Indicates whether the user pressed the zoom slider or not
+		self.isPressedZoomSlider = False
+		
 		# Indicates whether the user pressed the size slider or not
 		self.isPressedSizeSlider = False
 		
@@ -146,10 +152,19 @@ class Ui_MainWindow(object):
 		
 		self.actionQuit = QtGui.QAction(MainWindow)
 		self.actionQuit.setObjectName("actionQuit")
+		iconQuit = QtGui.QIcon()
+		iconQuit.addPixmap(QtGui.QPixmap(":/Delete.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+		self.actionQuit.setIcon(iconQuit)
 		self.actionHelp = QtGui.QAction(MainWindow)
 		self.actionHelp.setObjectName("actionHelp")
+		iconHelp = QtGui.QIcon()
+		iconHelp.addPixmap(QtGui.QPixmap(":/Help.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+		self.actionHelp.setIcon(iconHelp)
 		self.actionAbout = QtGui.QAction(MainWindow)
 		self.actionAbout.setObjectName("actionAbout")
+		iconAbout = QtGui.QIcon()
+		iconAbout.addPixmap(QtGui.QPixmap(":/Information.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+		self.actionAbout.setIcon(iconAbout)
 		
 		self.menuFile.addAction(self.actionQuit)
 		self.menuHelp.addAction(self.actionHelp)
@@ -172,7 +187,9 @@ class Ui_MainWindow(object):
 		
 		QtCore.QObject.connect(self.resetViewButton, Qt.SIGNAL("clicked()"), self.widget.resetView)
 		
+		QtCore.QObject.connect(self.zoomSlider, Qt.SIGNAL("sliderPressed()"), self.zoomSliderPressed)
 		QtCore.QObject.connect(self.zoomSlider, Qt.SIGNAL("valueChanged(int)"), self.zoomSliderChanged)
+		QtCore.QObject.connect(self.zoomSlider, Qt.SIGNAL("sliderReleased()"), self.zoomSliderReleased)
 		
 		QtCore.QObject.connect(self.sizeSlider, Qt.SIGNAL("sliderPressed()"), self.sizeSliderPressed)
 		QtCore.QObject.connect(self.sizeSlider, Qt.SIGNAL("valueChanged(int)"), self.sizeSliderChanged)
@@ -181,21 +198,37 @@ class Ui_MainWindow(object):
 		QtCore.QObject.connect(self.actionAbout, Qt.SIGNAL("triggered()"), self.showAboutMessage)
 		QtCore.QObject.connect(self.actionHelp, Qt.SIGNAL("triggered()"), self.showHelpMessage)
 		
+	def zoomSliderPressed(self):
+		"""
+		Called when the zoom slider is pressed.
+		"""
+		
+		self.isPressedZoomSlider = True
+	
 	def zoomSliderChanged(self):
 		"""
 		Called when the zoom slider's value is changed.
 		"""
 		
 		value = self.zoomSlider.value()
-		diff = abs(value - self.sliderPosition)
-		if value > self.sliderPosition:
-			for i in range(diff):
-				self.widget.zoomIn()
-		elif value < self.sliderPosition:
-			for i in range(diff):
-				self.widget.zoomOut()
+		
+		if self.isPressedZoomSlider:
+			diff = abs(value - self.sliderPosition)
+			if value > self.sliderPosition:
+				for i in range(diff):
+					self.widget.zoomIn()
+			elif value < self.sliderPosition:
+				for i in range(diff):
+					self.widget.zoomOut()
 			
 		self.sliderPosition = value
+		
+	def zoomSliderReleased(self):
+		"""
+		Called when the zoom slider is released.
+		"""
+		
+		self.isPressedZoomSlider = False
 		
 	def sizeSliderPressed(self):
 		"""
