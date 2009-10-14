@@ -16,6 +16,9 @@ class Camera(object):
 	POINTER = [0.0, 0.0, -1.0, 0]
 	LEFT_VECTOR = [-1.0, 0.0, 0.0, 0]
 	FOVY = 45
+	MAX_FOV = 180
+	MIN_FOV = 1
+	DEFAULT_DEPTH = 0.05
 	
 	def __init__(self):
 		"""
@@ -35,7 +38,7 @@ class Camera(object):
 		self.leftVector = numpy.array(Camera.LEFT_VECTOR)
 		
 		# Near/far clipping plane values.
-		self.near, self.far = 1, 21
+		self.near, self.far = 1, 201
 		
 		# Width/height aspect of the view.
 		self.aspect = 1
@@ -72,11 +75,14 @@ class Camera(object):
 		glLoadIdentity()
 		gluPerspective(self.fovAngle, self.aspect, self.near, self.far)
 		
-	def getScenePosition(self, x, y, depth=0.5):
+	def getScenePosition(self, x, y, depth=None):
 		"""
 		Gets the coordinates of the mouse in the scene, on a plane
 		that is between the far and near planes, according to the depth value.
 		"""
+		
+		if depth is None:
+			depth = Camera.DEFAULT_DEPTH
 
 		realFar = self.far
 		self.far = (self.far - self.near) * depth
@@ -111,7 +117,7 @@ class Camera(object):
 		Rotates the camera around the rotation center, given a rotation matrix.
 		"""
 		
-		rotCenter = (self.position + self.pointer*(self.far-self.near)/2)[:3]
+		rotCenter = (self.position + self.pointer*(self.far-self.near)*Camera.DEFAULT_DEPTH)[:3]
 			
 		glPushMatrix()
 		glLoadIdentity()
@@ -144,7 +150,7 @@ class Camera(object):
 		Zooms the camera in.
 		"""
 		
-		if self.fovAngle > 1:
+		if self.fovAngle > Camera.MIN_FOV + 1:
 			self.fovAngle -= 0.5
 			
 	def zoomOut(self):
@@ -152,7 +158,7 @@ class Camera(object):
 		Zooms the camera out.
 		"""
 		
-		if self.fovAngle < 179:
+		if self.fovAngle < Camera.MAX_FOV - 1:
 			self.fovAngle += 0.5
 		
 	def moveUp(self):

@@ -1,13 +1,16 @@
 <RCC>
   <qresource prefix="/" >
+    <file>preview.png</file>
+    <file>Selection.png</file>
+    <file>resize.png</file>
     <file>Delete.ico</file>
     <file>Globe.png</file>
     <file>Picture.png</file>
+    <file>Joaquim.png</file>
     <file>Search.png</file>
-	<file>Joaquim.png</file>
-	<file>Help.ico</file>
-	<file>Cat.png</file>
-	<file>Help.png</file>
-	<file>Information.ico</file>
+    <file>Help.ico</file>
+    <file>Cat.png</file>
+    <file>Help.png</file>
+    <file>Information.ico</file>
   </qresource>
 </RCC>

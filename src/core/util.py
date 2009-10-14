@@ -93,7 +93,13 @@ def angle(a, b):
 	
 	assert(len(a) == len(b))
 	
-	return degrees(acos(numpy.dot(a, b) / (lengthVector(a) * lengthVector(b))))
+	c = numpy.dot(a, b) / (lengthVector(a) * lengthVector(b))
+	if c > 1:
+		c = 1
+	elif c < -1:
+		c = -1
+
+	return degrees(acos(c))
 
 def lengthVector(vector):
 	"""

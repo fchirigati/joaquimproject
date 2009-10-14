@@ -93,14 +93,15 @@ class Cube(BaseObject):
 		Renders the cube.
 		"""
 		
+		glPushMatrix()
 		glColor3f(self.r, self.g, self.b)
 		glTranslate(*self._centralPos[:3])
 		glMultMatrixf(self.rotation)
-		
 		if self.wire:
 			glutWireCube(self._side)
 		else:
 			glutSolidCube(self._side)
+		glPopMatrix()
 		
 	@property	
 	def size(self):
@@ -138,12 +139,12 @@ class Sphere(BaseObject):
 		Renders the sphere.
 		"""
 		
+		glPushMatrix()
 		glColor(self.r, self.g, self.b)
 		glTranslate(*self._centralPos[:3])
 		glMultMatrixf(self.rotation)
-		
 		if self.wire:
 			glutWireSphere(self._radius, 20, 20)
 		else:
 			glutSolidSphere(self._radius, 20, 20)
-		
+		glPopMatrix()

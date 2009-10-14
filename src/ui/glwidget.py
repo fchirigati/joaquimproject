@@ -6,6 +6,9 @@ from OpenGL.GLU import *
 from OpenGL.GLUT import *
 import numpy
 
+from about_dialog import *
+from help_dialog import *
+
 from core.arcball import *
 from core.camera import *
 from core.group import *
@@ -17,18 +20,16 @@ from core.util import *
 class GlWidget(QGLWidget):
 	"""
 	Implementation of the QGLWidget widget.
-	Joaquim, el gato. Miau! :D
-	(Quem tinha tirado meu miado? - K.)
 	"""
 	
-	def __init__ (self, mainWindow, parent=None):
+	def __init__ (self, mainWindow, parent):
 		"""
 		Widget constructor.
 		"""
 		
 		super(GlWidget, self).__init__(parent)
 				
-		# MainWindow
+		# MainWindow reference.
 		self.mainWindow = mainWindow
 				
 		# Initialize window-related attributes.
@@ -67,9 +68,6 @@ class GlWidget(QGLWidget):
 		self.objTranslated = False
 		self.rotatingScene = False
 		
-		self.z = 0.0
-		self.z2 = 0.0
-		
 	def initializeGL(self):
 		"""
 		Method called right before the first call to paintGL() or resizeGL().
@@ -82,6 +80,10 @@ class GlWidget(QGLWidget):
 		# Lighting
 		self.lighting.enableLighting()
 		self.lighting.addLight(GL_LIGHT0)
+		self.lighting.setLight(GL_LIGHT0, [1.0, 1.0, 1.0, 0],
+										[1.0, 1.0, 1.0, 1.0],
+										[0, 0, 0, 1.0],
+										[0.2, 0.2, 0.2, 1.0])
 		
 		glEnable(GL_COLOR_MATERIAL)
 		glClearColor(0.6, 0.7, 0.9, 1)
@@ -119,9 +121,6 @@ class GlWidget(QGLWidget):
 		# Rotation
 		self.rotationMoveEvent()
 		
-		self.lastMousePos[X] = self.mousePos[X]
-		self.lastMousePos[Y] = self.mousePos[Y]
-		
 	def mousePressEvent(self, ev):
 		"""
 		Mouse press callback.
@@ -129,15 +128,21 @@ class GlWidget(QGLWidget):
 		
 		self.updateMousePosition()
 		btn = ev.button()
+		
 		if (btn == Qt.LeftButton):
-			self.leftButtonEvent()
-		elif (btn == Qt.RightButton):
-			self.rightButtonEvent()
-		elif (btn == Qt.MidButton):
-			self.midButtonEvent()
+			self.pressEventPicking()
+			self.leftClicked = True
 			
-		self.lastMousePos[X] = self.mousePos[X]
-		self.lastMousePos[Y] = self.mousePos[Y]
+		elif (btn == Qt.RightButton):
+			if self.mouseOverGroup():
+				self.selectedObjects.rightClickEvent(self.mousePos[X], self.mousePos[Y])
+			else:
+				self.sceneArcBall.setInitialPt(self.mousePos[X], self.mousePos[Y])
+				self.rotatingScene = True	
+			self.rightClicked = True
+			
+		elif (btn == Qt.MidButton):
+			self.middleClicked = True
 		
 	def mouseReleaseEvent(self, ev):
 		"""
@@ -154,9 +159,6 @@ class GlWidget(QGLWidget):
 		
 		# Translation
 		self.translationReleaseEvent()
-		
-		self.lastMousePos[X] = self.mousePos[X]
-		self.lastMousePos[Y] = self.mousePos[Y]
 
 	def enterEvent(self, ev):
 		"""
@@ -173,6 +175,17 @@ class GlWidget(QGLWidget):
 		
 		self.parent().setFocus()
 		self.releaseKeyboard()
+				
+	def selectAll(self):
+		"""
+		Selects all objects.
+		"""
+		
+		for obj in self.sceneObjects:
+			if obj not in self.selectedObjects:
+				self.selectedObjects.add(obj)
+		
+		self.updateGL()
 		
 	def translationMoveEvent(self):
 		"""
@@ -180,7 +193,6 @@ class GlWidget(QGLWidget):
 		"""
 		
 		if self.leftClicked:
-			self.updateMousePosition()
 			self.handleTranslation()
 			self.updateGL()
 		
@@ -190,7 +202,7 @@ class GlWidget(QGLWidget):
 		"""
 		
 		if self.leftClicked:
-			if not self.objTranslated:
+			if not(self.objTranslated):
 				# If there was a translation, do not apply a deselection event.
 				self.releaseEventPicking()
 			else:
@@ -203,22 +215,15 @@ class GlWidget(QGLWidget):
 		Zoom event called inside mouseMoveEvent().
 		"""
 		
-		self.z = self.mousePos[Y]
 		if self.middleClicked:
-			if self.z > self.z2:
-				self.zoomIn()
-			else:
-				self.zoomOut()
-			self.mainWindow.setZoomSliderValue(int(358 - self.camera.fovAngle*2))
-				
-	def zoomIn(self):
-		"""
-		Zooms the camera in.
-		"""
+			if self.lastMousePos[Y] < self.mousePos[Y]:
+				self.camera.zoomIn()
+				self.updateGL()
+			elif self.lastMousePos[Y] > self.mousePos[Y]:
+				self.camera.zoomOut()
+				self.updateGL()
+			self.mainWindow.zoomSlider.setValue(int(self.camera.fovAngle))
 		
-		self.camera.zoomIn()
-		self.z2 = self.mousePos[Y]
-		self.updateMousePosition()
 		self.updateGL()
 		
 	def zoomOut(self):
@@ -227,8 +232,6 @@ class GlWidget(QGLWidget):
 		"""
 		
 		self.camera.zoomOut()
-		self.z2 = self.mousePos[Y]
-		self.updateMousePosition()
 		self.updateGL()
 		
 	def zoomReleaseEvent(self):
@@ -243,15 +246,12 @@ class GlWidget(QGLWidget):
 		Rotation event called inside mouseMoveEvent().
 		"""
 		
-		if self.rightClicked:
-			self.updateMousePosition()
-			
+		if self.rightClicked:			
 			if self.rotatingScene:
 				r = self.sceneArcBall.setFinalPt(self.mousePos[X], self.mousePos[Y], True)
 				self.camera.rotate(r)
 			else:
-				self.selectedObjects.rightClickMoveEvent(self.mousePos[X], self.mousePos[Y])
-			
+				self.selectedObjects.rightClickMoveEvent(self.mousePos[X], self.mousePos[Y])			
 			self.updateGL()
 		
 	def rotationReleaseEvent(self):
@@ -266,39 +266,6 @@ class GlWidget(QGLWidget):
 				self.selectedObjects.rightClickReleaseEvent(self.mousePos[X], self.mousePos[Y])
 			self.rightClicked = False
 			self.updateGL()
-		
-	def leftButtonEvent(self):
-		"""
-		Event called when mouse's left button is pressed.
-		"""
-		
-		self.lastMousePos[X] = self.mousePos[X]
-		self.lastMousePos[Y] = self.mousePos[Y]
-		
-		self.pressEventPicking()
-		self.leftClicked = True
-		
-	def rightButtonEvent(self):
-		"""
-		Event called when mouse's right button is pressed.
-		"""
-		
-		if self.mouseOverGroup():
-			self.selectedObjects.rightClickEvent(self.mousePos[X], self.mousePos[Y])
-		else:
-			# The mouse was pressed outside the group selection sphere.
-			self.sceneArcBall.setInitialPt(self.mousePos[X], self.mousePos[Y])
-			self.rotatingScene = True
-			
-		self.rightClicked = True
-				
-	def midButtonEvent(self):
-		"""
-		Event called when mouse's middle button is pressed.
-		"""
-		
-		self.middleClicked = True
-		self.z = self.mousePos[Y]
 
 	def keyPressEvent(self, ev):
 		"""
@@ -310,7 +277,6 @@ class GlWidget(QGLWidget):
 		
 		if (ev.modifiers() & Qt.ControlModifier):
 			self.ctrlPressed = True
-			
 		if (key == "C"):
 			self.createCube()
 			self.updateGL()
@@ -356,7 +322,7 @@ class GlWidget(QGLWidget):
 			self.camera.tiltRight()
 			self.updateGL()
 		elif (ev.key() == Qt.Key_Home):
-			self.homeKeyPressEvent()
+			self.viewAll()
 		
 	def keyReleaseEvent(self, ev):
 		"""
@@ -371,7 +337,7 @@ class GlWidget(QGLWidget):
 		Creates a new cube.
 		"""
 		
-		newCube = Cube(self, self.mainWindow.getSizeSliderValue())
+		newCube = Cube(self, self.mainWindow.sizeSlider.value()*0.1)
 		newCube.centralPosition = self.camera.getScenePosition(self.mousePos[X], self.mousePos[Y])
 		newCube.rotation = self.camera.rotation
 		self.sceneObjects.append(newCube)
@@ -381,20 +347,10 @@ class GlWidget(QGLWidget):
 		Creates a new sphere.
 		"""
 		
-		newSphere = Sphere(self, self.mainWindow.getSizeSliderValue())
+		newSphere = Sphere(self, self.mainWindow.sizeSlider.value()*0.1)
 		newSphere.centralPosition = self.camera.getScenePosition(self.mousePos[X], self.mousePos[Y])
 		newSphere.rotation = self.camera.rotation
 		self.sceneObjects.append(newSphere)
-		
-	def selectAll(self):
-		"""
-		Selects all objects.
-		"""
-		
-		for obj in self.sceneObjects:
-			if obj not in self.selectedObjects:
-				obj.select(True)
-				self.selectedObjects.add(obj)
 	
 	def deleteSelectedObjects(self):
 		"""
@@ -411,94 +367,40 @@ class GlWidget(QGLWidget):
 		"""
 		
 		self.camera.reset()
-		self.mainWindow.setZoomSliderValue(int(358 - self.camera.fovAngle*2))
+		self.mainWindow.zoomSlider.setValue(int(self.camera.fovAngle))
 		self.updateGL()
 	
-	def homeKeyPressEvent(self):
+	def viewAll(self):
 		"""
 		Event called when HOME key is pressed.
 		"""
 		
-		if len(self.sceneObjects) > 0:
-			obj = self.sceneObjects[0]
-			maxX = obj.centralPosition[X]
-			minX = obj.centralPosition[X]
-			maxY = obj.centralPosition[Y]
-			minY = obj.centralPosition[Y]
-			maxZ = obj.centralPosition[Z]
-			minZ = obj.centralPosition[Z]
-			
-			for obj in self.sceneObjects:
-				if obj.centralPosition[X] > maxX:
-					maxX = obj.centralPosition[X]
-				if obj.centralPosition[X] < minX:
-					minX = obj.centralPosition[X] 
-				if obj.centralPosition[Y] > maxY:
-					maxY = obj.centralPosition[Y]
-				if obj.centralPosition[Y] < minY:
-					minY = obj.centralPosition[Y]
-				if obj.centralPosition[Z] > maxZ:
-					maxZ = obj.centralPosition[Z]
-				if obj.centralPosition[Z] < minZ:
-					minZ = obj.centralPosition[Z]
-				
-			sideX = abs(maxX-minX)
-			sideY = abs(maxY-minY)
-			sideZ = abs(maxZ-minZ)
-			
-			side = max(sideX, sideY)
-			side = max(side, sideZ)
-			
-			if len(self.sceneObjects) == 1:
-				side = 1
-			
-			positionX = (minX+maxX)/2.0
-			positionY = (minY+maxY)/2.0
-			positionZ = (minZ+maxZ)/2.0
-			
-			self.camera.position[X] = positionX - self.camera.pointer[X]*(side*sqrt(3))
-			self.camera.position[Y] = positionY - self.camera.pointer[Y]*(side*sqrt(3))
-			self.camera.position[Z] = positionZ - self.camera.pointer[Z]*(side*sqrt(3))
-				
-		else:
-			self.camera.position[X] = 0 - self.camera.pointer[X]*3
-			self.camera.position[Y] = 0 - self.camera.pointer[Y]*3
-			self.camera.position[Z] = 0 - self.camera.pointer[Z]*3
-			
+		if len(self.sceneObjects) == 0:
+			return
+		
+		group = Group(self)
+		for obj in self.sceneObjects:
+			group.add(obj, False)
+		
 		self.camera.resetFovy()
-		self.mainWindow.setZoomSliderValue(int(358 - self.camera.fovAngle*2))
+		self.mainWindow.zoomSlider.setValue(int(self.camera.fovAngle))
+		dist = group.radius / sin(radians(self.camera.fovAngle * 0.5))
+		self.camera.position = group.centralPosition - self.camera.pointer * dist
 		
-		self.updateGL()
-		
-	def changeSelectedObjectsSize(self, value):
-		"""
-		Changes the size of the selected objects to value.
-		"""
-		
-		for obj in self.selectedObjects:
-			obj.size = value
-			obj.render()
-			
 		self.updateGL()
 		
 	def updateMousePosition(self):
 		"""
-		Updates mousePos[X] and mousePos[Y] attributes, using GL coordinates.
+		Updates mousePos and lastMousePos attributes, using GL coordinates.
 		"""
 		
 		screenY = self.mapFromGlobal(QCursor.pos()).y()
+		
+		self.lastMousePos[X] = self.mousePos[X]
+		self.lastMousePos[Y] = self.mousePos[Y]
+		
 		self.mousePos[X] = self.mapFromGlobal(QCursor.pos()).x()
 		self.mousePos[Y] = glGetIntegerv(GL_VIEWPORT)[3] - screenY - 1
-		
-	def renderLighting(self):
-		"""
-		Sets the lighting of the scene.
-		"""
-		
-		self.lighting.setLight(GL_LIGHT0, [1.0, 1.0, 1.0, 0],
-							[1.0, 1.0, 1.0, 1.0],
-							[0, 0, 0, 1.0],
-							[0.2, 0.2, 0.2, 1.0])
 		
 	def renderAxis(self):
 		"""
@@ -514,14 +416,14 @@ class GlWidget(QGLWidget):
 		glDisable(GL_LIGHTING)
 		glBegin(GL_LINES)
 		glColor(1, 0, 0)
-		glVertex(0, 0, 0)
-		glVertex(1, 0, 0)
+		glVertex3f(0, 0, 0)
+		glVertex3f(1, 0, 0)
 		glColor(0, 1, 0)
-		glVertex(0, 0, 0)
-		glVertex(0, 1, 0)
+		glVertex3f(0, 0, 0)
+		glVertex3f(0, 1, 0)
 		glColor(0, 0, 1)
-		glVertex(0, 0, 0)
-		glVertex(0, 0, 1)
+		glVertex3f(0, 0, 0)
+		glVertex3f(0, 0, 1)
 		glEnd()
 		glEnable(GL_LIGHTING)
 		glLineWidth(1)
@@ -537,23 +439,21 @@ class GlWidget(QGLWidget):
 		self.camera.setView()
 		
 		# Lighting
-		self.renderLighting()
+		self.lighting.render()
 		
 		# Reference of the XYZ axis
 		self.renderAxis()
 		
 		for obj in self.sceneObjects:
-			glPushMatrix()
 			obj.render()
-			glPopMatrix()
 		
-		glPushMatrix()
 		self.selectedObjects.render()
-		glPopMatrix()
+		
+		self.swapBuffers()
 		
 	def handleTranslation(self):
 		"""
-		Handles object translation when the user drags the object with the mouse's left button.
+		Handles object translation when the user drags an object with the mouse's left button.
 		"""
 		
 		if (self.lastMousePos[X] != self.mousePos[X]) or (self.lastMousePos[Y] != self.mousePos[Y]):
@@ -572,6 +472,9 @@ class GlWidget(QGLWidget):
 		Returns None if there is none.
 		"""
 		
+		if len(self.sceneObjects) == 0:
+			return None
+		
 		buffer = glSelectBuffer(len(self.sceneObjects)*4)
 		projection = glGetDouble(GL_PROJECTION_MATRIX)
 		viewport = glGetInteger(GL_VIEWPORT)
@@ -589,10 +492,8 @@ class GlWidget(QGLWidget):
 		glPushName(0)
 		
 		for i in range(len(self.sceneObjects)):
-			glPushMatrix()
 			glLoadName(i)
 			self.sceneObjects[i].render()
-			glPopMatrix()
 				
 		glMatrixMode(GL_PROJECTION)
 		glPopMatrix()
@@ -638,10 +539,8 @@ class GlWidget(QGLWidget):
 		glInitNames()
 		glPushName(0)
 		
-		glPushMatrix()
 		glLoadName(0)
 		self.selectedObjects.render(True)
-		glPopMatrix()
 				
 		glMatrixMode(GL_PROJECTION)
 		glPopMatrix()
@@ -697,8 +596,10 @@ class GlWidget(QGLWidget):
 			# No objects were picked.
 			self.selectedObjects.removeAll()
 			
+		if len(self.selectedObjects) > 0:
+			self.mainWindow.sizeSlider.setValue(self.selectedObjects.maxObjectSize * 10)
+			
 		self.updateGL()
-		self.mainWindow.setSizeSliderValue(self.selectedObjects.maxObjectSize * 10)
 		
 	def releaseEventPicking(self):
 		"""
@@ -740,5 +641,49 @@ class GlWidget(QGLWidget):
 		elif self.preSelectedObject == pickedObject:
 			self.preSelectedObject = None
 
+		if len(self.selectedObjects) > 0:
+			self.mainWindow.sizeSlider.setValue(self.selectedObjects.maxObjectSize * 10)
 		self.updateGL()
-		self.mainWindow.setSizeSliderValue(self.selectedObjects.maxObjectSize * 10)
+
+	def showAboutEvent(self):
+		"""
+		Shows the about dialog.
+		"""
+		
+		aboutMessage = AboutDialog()
+		aboutMessage.exec_()
+		
+	def showHelpEvent(self):
+		"""
+		Shows the help dialog.
+		"""
+		
+		aboutMessage = HelpDialog()
+		aboutMessage.exec_()
+		
+	def quitEvent(self):
+		"""
+		Method called when the menu Quit button is pressed.
+		"""
+		
+		pass
+	
+	def zoomSliderChangeEvent(self):
+		"""
+		Method called when the user changes the zoom slider value.
+		"""
+		
+		self.camera.fovAngle = self.mainWindow.zoomSlider.value()
+		self.updateGL()
+	
+	def sizeSliderChangeEvent(self):
+		"""
+		Changes the size of the selected objects to value.
+		"""
+		
+		size = self.mainWindow.sizeSlider.value() * 0.1
+		for obj in self.selectedObjects:
+			obj.size = size
+		self.selectedObjects.updateRadiusAndCenter()
+			
+		self.updateGL()

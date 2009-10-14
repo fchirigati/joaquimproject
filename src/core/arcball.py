@@ -27,9 +27,17 @@ class ArcBall(object):
 		self.parent = parent
 		
 	def setCentralPosition(self, newPosition):
+		"""
+		Sets the position of the arcball in world coordinates.
+		"""
+		
 		self.centralPos = newPosition
 		
 	def setRadius(self, newRadius):
+		"""
+		Sets the radius of the arcball's sphere.
+		"""
+		
 		self.radius = newRadius
 		
 	def setInitialPt(self, x, y):
@@ -118,9 +126,6 @@ class SceneArcBall(ArcBall):
 	"""
 	Specific ArcBall object for the overall scene.
 	"""
-	
-	#def __init__(self, parent):
-	#	super(SceneArcBall, self).__init__(parent)
 	
 	def screenToSphereCoordinates(self, x, y):
 		"""

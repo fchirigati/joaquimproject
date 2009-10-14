@@ -22,7 +22,7 @@ class Lighting(object):
 	
 	def addLight(self, id):
 		"""
-		Adds a light in the scene.
+		Adds a light in the scene. id should be GL_LIGHTn.
 		"""
 		
 		newLight = Light(id)
@@ -30,10 +30,18 @@ class Lighting(object):
 		
 	def setLight(self, id, position, diffuse, specular, ambient):
 		"""
-		Sets the id light.
+		Sets the id light. id should be GL_LIGHTn.
 		"""
 		
 		self.lights[id].set(position, diffuse, specular, ambient)
+		
+	def render(self):
+		"""
+		Renders all lights.
+		"""
+		
+		for light in self.lights.values():
+			light.render()
 
 class Light(object):
 	"""
