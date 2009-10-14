@@ -68,6 +68,10 @@ class GlWidget(QGLWidget):
 		self.objTranslated = False
 		self.rotatingScene = False
 		
+		# Indicates whether if the user is editing or not a slider.
+		self.editingSizeSlider = False
+		self.editingZoomSlider = False
+		
 	def initializeGL(self):
 		"""
 		Method called right before the first call to paintGL() or resizeGL().
@@ -673,17 +677,49 @@ class GlWidget(QGLWidget):
 		Method called when the user changes the zoom slider value.
 		"""
 		
-		self.camera.fovAngle = self.mainWindow.zoomSlider.value()
-		self.updateGL()
+		if self.editingZoomSlider:
+			self.camera.fovAngle = self.mainWindow.zoomSlider.value()
+			self.updateGL()
+		
+	def zoomSliderPressedEvent(self):
+		"""
+		Method called when the zoom slider is pressed.
+		"""
+		
+		self.editingZoomSlider = True
+		
+	def zoomSliderReleasedEvent(self):
+		"""
+		Method called when the zoom slider is released.
+		"""
+		
+		self.editingZoomSlider = False
 	
 	def sizeSliderChangeEvent(self):
 		"""
 		Changes the size of the selected objects to value.
 		"""
 		
-		size = self.mainWindow.sizeSlider.value() * 0.1
-		for obj in self.selectedObjects:
-			obj.size = size
-		self.selectedObjects.updateRadiusAndCenter()
-			
-		self.updateGL()
+		if self.editingSizeSlider:
+			size = self.mainWindow.sizeSlider.value() * 0.1
+			for obj in self.selectedObjects:
+				obj.size = size
+			self.selectedObjects.updateRadiusAndCenter()
+				
+			self.updateGL()
+
+	def sizeSliderPressedEvent(self):
+		"""
+		Method called when the size slider is pressed.
+		"""
+		
+		self.editingSizeSlider = True
+		
+	def sizeSliderReleasedEvent(self):
+		"""
+		Method called when the size slider is released.
+		"""
+		
+		self.editingSizeSlider = False
+		
+	

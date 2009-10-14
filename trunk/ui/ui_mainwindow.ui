@@ -246,7 +246,7 @@ p, li { white-space: pre-wrap; }
                <number>179</number>
               </property>
               <property name="sliderPosition">
-               <number>90</number>
+               <number>45</number>
               </property>
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -370,6 +370,10 @@ p, li { white-space: pre-wrap; }
     <slot>sizeSliderChangeEvent()</slot>
     <slot>showAboutEvent()</slot>
     <slot>showHelpEvent()</slot>
+    <slot>zoomSliderPressedEvent()</slot>
+    <slot>zoomSliderReleasedEvent()</slot>
+    <slot>sizeSliderPressedEvent()</slot>
+    <slot>sizeSliderReleasedEvent()</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -518,6 +522,70 @@ p, li { white-space: pre-wrap; }
     <hint type="destinationlabel">
      <x>340</x>
      <y>276</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>sizeSlider</sender>
+   <signal>sliderPressed()</signal>
+   <receiver>widget</receiver>
+   <slot>sizeSliderPressedEvent()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>390</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>392</x>
+     <y>108</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>sizeSlider</sender>
+   <signal>sliderReleased()</signal>
+   <receiver>widget</receiver>
+   <slot>sizeSliderReleasedEvent()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>412</x>
+     <y>56</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>424</x>
+     <y>133</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>zoomSlider</sender>
+   <signal>sliderPressed()</signal>
+   <receiver>widget</receiver>
+   <slot>zoomSliderPressedEvent()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>26</x>
+     <y>169</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>65</x>
+     <y>169</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>zoomSlider</sender>
+   <signal>sliderReleased()</signal>
+   <receiver>widget</receiver>
+   <slot>zoomSliderReleasedEvent()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>26</x>
+     <y>186</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>66</x>
+     <y>195</y>
     </hint>
    </hints>
   </connection>

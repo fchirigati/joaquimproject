@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_mainwindow.ui'
 #
-# Created: Tue Oct 13 23:09:44 2009
+# Created: Tue Oct 13 23:49:59 2009
 #      by: PyQt4 UI code generator 4.5.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -112,7 +112,7 @@ class Ui_MainWindow(object):
         self.zoomSlider.setSizePolicy(sizePolicy)
         self.zoomSlider.setMinimum(1)
         self.zoomSlider.setMaximum(179)
-        self.zoomSlider.setSliderPosition(90)
+        self.zoomSlider.setSliderPosition(45)
         self.zoomSlider.setOrientation(QtCore.Qt.Vertical)
         self.zoomSlider.setInvertedAppearance(True)
         self.zoomSlider.setObjectName("zoomSlider")
@@ -126,7 +126,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout = QtGui.QHBoxLayout(self.frame)
         self.horizontalLayout.setMargin(0)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.widget = GlWidget(self, self.frame)
+        self.widget = GlWidget(self.frame)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -179,6 +179,10 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.actionAbout, QtCore.SIGNAL("triggered()"), self.widget.showAboutEvent)
         QtCore.QObject.connect(self.actionHelp, QtCore.SIGNAL("triggered()"), self.widget.showHelpEvent)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL("triggered()"), self.widget.quitEvent)
+        QtCore.QObject.connect(self.sizeSlider, QtCore.SIGNAL("sliderPressed()"), self.widget.sizeSliderPressedEvent)
+        QtCore.QObject.connect(self.sizeSlider, QtCore.SIGNAL("sliderReleased()"), self.widget.sizeSliderReleasedEvent)
+        QtCore.QObject.connect(self.zoomSlider, QtCore.SIGNAL("sliderPressed()"), self.widget.zoomSliderPressedEvent)
+        QtCore.QObject.connect(self.zoomSlider, QtCore.SIGNAL("sliderReleased()"), self.widget.zoomSliderReleasedEvent)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
