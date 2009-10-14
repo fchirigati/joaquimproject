@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>466</width>
-    <height>294</height>
+    <width>470</width>
+    <height>300</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,11 +19,24 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>470</width>
+    <height>300</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>470</width>
+    <height>300</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>About Joaquim</string>
   </property>
-  <property name="sizeGripEnabled">
-   <bool>true</bool>
+  <property name="windowIcon">
+   <iconset resource="images.qrc">
+    <normaloff>:/Cat.png</normaloff>:/Cat.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -39,7 +52,7 @@
        <widget class="QLabel" name="label">
         <property name="geometry">
          <rect>
-          <x>20</x>
+          <x>30</x>
           <y>0</y>
           <width>391</width>
           <height>271</height>
@@ -65,8 +78,8 @@ p, li { white-space: pre-wrap; }
        <widget class="QPushButton" name="pushButton">
         <property name="geometry">
          <rect>
-          <x>360</x>
-          <y>240</y>
+          <x>370</x>
+          <y>250</y>
           <width>75</width>
           <height>23</height>
          </rect>

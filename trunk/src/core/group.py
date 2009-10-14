@@ -58,7 +58,7 @@ class Group(object):
 	
 	def leftClickPressEvent(self, x, y):
 		"""
-		Nano to-do
+		Method called when the left mouse button is pressed.
 		"""
 		
 		screenPos = gluProject(*self._centralPos[:3])
@@ -66,7 +66,7 @@ class Group(object):
 	
 	def leftClickMoveEvent(self, x, y):
 		"""
-		TO-DO
+		Method called when the mouse moves and the left mouse button is pressed.
 		"""
 		
 		screenPos = gluProject(*self._centralPos[:3])
@@ -79,7 +79,7 @@ class Group(object):
 	
 	def rightClickEvent(self, x, y):
 		"""
-		TO-DO
+		Method called when the right mouse button is pressed.
 		"""
 		
 		if len(self._objects) == 0:
@@ -90,7 +90,7 @@ class Group(object):
 	
 	def rightClickMoveEvent(self, x, y):
 		"""
-		TO-DO
+		Method called when the mouse moves and the right mouse button is pressed.
 		"""
 		
 		if len(self._objects) == 0:
@@ -111,7 +111,7 @@ class Group(object):
 		
 	def rightClickReleaseEvent(self, x, y):
 		"""
-		TO-DO
+		Method called when the left mouse button is released.
 		"""
 		
 		if len(self._objects) == 0:
@@ -150,7 +150,7 @@ class Group(object):
 		
 		return self._radius
 	
-	def add(self, object):
+	def add(self, object, autoSelect=True):
 		"""
 		Adds an object to the group.
 		"""
@@ -166,7 +166,9 @@ class Group(object):
 			self.maxObjectSize = object.size
 				
 		self._objects.append(object)
-		object.select(True)
+		
+		if autoSelect:
+			object.select(True)
 		
 		if len(self._objects) == 1:
 			self._radius = self._objects[0].radius
@@ -196,21 +198,44 @@ class Group(object):
 		self.arcBall.centralPos = self._centralPos
 		self.arcBall.radius = self._radius
 		
-	def remove(self, object):
+	def remove(self, object, autoDeselect=True):
 		"""
 		Removes an object from the group.
 		"""
 		
 		self._objects.remove(object)
+		
+		if autoDeselect:
+			object.select(False)
+		
+		self.updateRadiusAndCenter()
+		
+	def removeAll(self):
+		"""
+		Removes all objects from the group.
+		"""
+		
+		for obj in self._objects:
+			obj.select(False)
+			
+		del self._objects[:]
 		self._radius = 0
 		self._maxDistance = 0
-		object.select(False)
+		self.maxObjectSize = 0
 		
-		if self.maxObjectSize == object.size:
-			self.maxObjectSize = 0
-			for obj in self._objects:
-				if obj.size > self.maxObjectSize:
-					self.maxObjectSize = obj.size	
+	def updateRadiusAndCenter(self):
+		"""
+		Updates the radius and center of the group. Also updates the maxObjectSize attribute.
+		This method is O(n^2).
+		"""
+		
+		self._radius = 0
+		self._maxDistance = 0
+		
+		self.maxObjectSize = 0
+		for obj in self._objects:
+			if obj.size > self.maxObjectSize:
+				self.maxObjectSize = obj.size	
 		
 		if len(self._objects) == 0:
 			return
@@ -241,19 +266,6 @@ class Group(object):
 		self.arcBall.centralPos = self._centralPos
 		self.arcBall.radius = self._radius
 		
-	def removeAll(self):
-		"""
-		Removes all objects from the group.
-		"""
-		
-		for obj in self._objects:
-			obj.select(False)
-			
-		del self._objects[:]
-		self._radius = 0
-		self._maxDistance = 0
-		self.maxObjectSize = 0
-		
 	def render(self, pickingMode=False):
 		"""
 		Renders the group effects. Does not render the objects.
@@ -262,6 +274,7 @@ class Group(object):
 		if len(self._objects) == 0:
 			return
 		
+		glPushMatrix()
 		if pickingMode:
 			glTranslate(*self._centralPos[:3])
 			glutSolidSphere(self._radius, 20, 20)
@@ -277,3 +290,5 @@ class Group(object):
 			glColor4f(0.1, 0.3, 0.5, alpha)
 			glutWireSphere(self._radius + 0.005, 20, 20)
 			glEnable(GL_LIGHTING)
+		glPopMatrix()
+		
