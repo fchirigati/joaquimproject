@@ -453,8 +453,6 @@ class GlWidget(QGLWidget):
 		
 		self.selectedObjects.render()
 		
-		self.swapBuffers()
-		
 	def handleTranslation(self):
 		"""
 		Handles object translation when the user drags an object with the mouse's left button.
