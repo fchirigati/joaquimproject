@@ -675,7 +675,7 @@ class GlWidget(QGLWidget):
 		Method called when the user changes the zoom slider value.
 		"""
 		
-		if self.editingZoomSlider:
+		if self.mainWindow.zoomSlider.hasFocus():
 			self.camera.fovAngle = self.mainWindow.zoomSlider.value()
 			self.updateGL()
 		
@@ -698,7 +698,7 @@ class GlWidget(QGLWidget):
 		Changes the size of the selected objects to value.
 		"""
 		
-		if self.editingSizeSlider:
+		if self.mainWindow.sizeSlider.hasFocus():
 			size = self.mainWindow.sizeSlider.value() * 0.1
 			for obj in self.selectedObjects:
 				obj.size = size
