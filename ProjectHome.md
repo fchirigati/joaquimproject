@@ -1,0 +1,1 @@
+Joaquim is a platform-independent open-source software used as a GC course project. I love Kiks (Tata).
